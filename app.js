@@ -141,6 +141,14 @@ const Store = {
   clearActiveWorkout() {
     localStorage.removeItem('il_active_workout');
   },
+
+  // Weekly schedule — per-date model
+  getSchedule() {
+    return this._get('il_schedule', { days: {} });
+  },
+  saveSchedule(s) {
+    this._set('il_schedule', s);
+  },
 };
 
 // Seed exercises on first launch
@@ -287,11 +295,336 @@ function tabBar(active) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// WEEKLY SCHEDULE — Helpers & Component
+// ══════════════════════════════════════════════════════════════
+
+// Schedule data model:
+// Store.getSchedule() → { days: { 'YYYY-MM-DD': true, ... } }
+// Each date key means "workout scheduled on this day".
+// Completed workouts are detected from Store.getWorkouts() via finishedAt timestamp.
+
+// Get YYYY-MM-DD for a date (local timezone, no UTC drift)
+function toDateStr(date) {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Get 7 dates for a week at a given offset from current week (0 = this week)
+function getWeekDates(weekOffset) {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diff + weekOffset * 7);
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+// Format a week range label
+function formatWeekLabel(weekOffset) {
+  if (weekOffset === 0) return 'This Week';
+  const dates = getWeekDates(weekOffset);
+  const mon = dates[0];
+  const sun = dates[6];
+  const fmt = (d) => {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()}`;
+  };
+  return `${fmt(mon)} – ${fmt(sun)}`;
+}
+
+// For a given week offset, compute each day's status
+function getWeekScheduleStatus(weekOffset) {
+  const schedule = Store.getSchedule();
+  const scheduledDays = schedule.days || {};
+  const weekDates = getWeekDates(weekOffset);
+  const workouts = Store.getWorkouts();
+  const today = toDateStr(new Date());
+
+  return weekDates.map((date) => {
+    const dateStr = toDateStr(date);
+    const completed = workouts.some((w) => toDateStr(w.finishedAt) === dateStr);
+    const scheduled = scheduledDays[dateStr] === true;
+
+    let status;
+    if (completed) {
+      status = 'completed';
+    } else if (scheduled && dateStr < today) {
+      status = 'missed';
+    } else if (scheduled) {
+      status = 'scheduled';
+    } else {
+      status = 'rest';
+    }
+
+    return { date, dateStr, status, isToday: dateStr === today };
+  });
+}
+
+// Toggle a day's scheduled status
+function toggleScheduleDay(dateStr) {
+  const schedule = Store.getSchedule();
+  if (!schedule.days) schedule.days = {};
+  if (schedule.days[dateStr]) {
+    delete schedule.days[dateStr];
+  } else {
+    schedule.days[dateStr] = true;
+  }
+  Store.saveSchedule(schedule);
+}
+
+// Move a scheduled workout from one date to another
+function rescheduleDay(fromDate, toDate) {
+  const schedule = Store.getSchedule();
+  if (!schedule.days) schedule.days = {};
+  delete schedule.days[fromDate];
+  schedule.days[toDate] = true;
+  Store.saveSchedule(schedule);
+}
+
+// Dumbbell SVG icon (reused)
+const DUMBBELL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><rect x="2" y="5" width="4.5" height="14" rx="1.5"/><rect x="17.5" y="5" width="4.5" height="14" rx="1.5"/><line x1="12" y1="5" x2="12" y2="19"/></svg>`;
+
+// Current week offset state (module-level so it persists across re-renders within the same view)
+let _weekOffset = 0;
+
+// Render the weekly schedule strip with navigation
+function renderWeekStrip(weekOffset) {
+  const days = getWeekScheduleStatus(weekOffset);
+  const labels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  const weekLabel = formatWeekLabel(weekOffset);
+
+  // Stats for this week
+  const completed = days.filter((d) => d.status === 'completed').length;
+  const scheduled = days.filter((d) => d.status === 'scheduled').length;
+  const missed = days.filter((d) => d.status === 'missed').length;
+  const total = completed + scheduled + missed;
+
+  // Can navigate ±4 weeks
+  const canPrev = weekOffset > -4;
+  const canNext = weekOffset < 4;
+
+  return `
+    <div class="week-schedule-card" id="weekScheduleCard">
+      <div class="week-nav">
+        <button class="week-nav-btn ${canPrev ? '' : 'disabled'}" id="weekPrev" aria-label="Previous week">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="week-nav-label">${weekLabel}</span>
+        <button class="week-nav-btn ${canNext ? '' : 'disabled'}" id="weekNext" aria-label="Next week">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="week-strip" id="weekStrip">
+        ${days
+          .map(
+            (d, i) => `
+          <div class="week-day ${d.status} ${d.isToday ? 'today' : ''}" data-date="${d.dateStr}" data-index="${i}">
+            <div class="week-day-ring">
+              <span class="week-day-label">${labels[i]}</span>
+            </div>
+            <div class="week-day-icon">
+              ${
+                d.status === 'completed'
+                  ? `<span class="week-icon-done">${DUMBBELL_SVG}<span class="week-check">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span></span>`
+                  : d.status === 'scheduled' || d.status === 'missed'
+                    ? `<span class="week-icon-scheduled">${DUMBBELL_SVG}</span>`
+                    : '<span class="week-icon-rest"></span>'
+              }
+            </div>
+          </div>
+        `,
+          )
+          .join('')}
+      </div>
+      ${total > 0 ? `
+        <div class="week-stats">
+          ${completed > 0 ? `<span class="week-stat completed">${completed} done</span>` : ''}
+          ${scheduled > 0 ? `<span class="week-stat scheduled">${scheduled} planned</span>` : ''}
+          ${missed > 0 ? `<span class="week-stat missed">${missed} missed</span>` : ''}
+        </div>
+      ` : `<div class="week-stats"><span class="week-stat rest">No workouts planned</span></div>`}
+    </div>
+  `;
+}
+
+// Bind all interactions on the week schedule card
+function bindWeekStripEvents() {
+  const card = document.getElementById('weekScheduleCard');
+  if (!card) return;
+  const strip = document.getElementById('weekStrip');
+
+  // ── Navigation arrows ──
+  const prevBtn = document.getElementById('weekPrev');
+  const nextBtn = document.getElementById('weekNext');
+  if (prevBtn && !prevBtn.classList.contains('disabled')) {
+    prevBtn.addEventListener('click', () => {
+      _weekOffset--;
+      rerenderWeekStrip();
+    });
+  }
+  if (nextBtn && !nextBtn.classList.contains('disabled')) {
+    nextBtn.addEventListener('click', () => {
+      _weekOffset++;
+      rerenderWeekStrip();
+    });
+  }
+
+  // ── Tap to toggle scheduled/rest (only for today and future, non-completed days) ──
+  let dragSrcDate = null;
+  let longPressTimer = null;
+  let isDragging = false;
+  const today = toDateStr(new Date());
+
+  strip.querySelectorAll('.week-day').forEach((dayEl) => {
+    const dateStr = dayEl.dataset.date;
+    const isCompleted = dayEl.classList.contains('completed');
+    const isPastAndNotScheduled = dateStr < today && !dayEl.classList.contains('missed') && !dayEl.classList.contains('scheduled');
+    const isScheduledOrMissed = dayEl.classList.contains('scheduled') || dayEl.classList.contains('missed');
+
+    // ── Long press to drag (only scheduled/missed days in current/future) ──
+    if (isScheduledOrMissed) {
+      const startLongPress = () => {
+        longPressTimer = setTimeout(() => {
+          isDragging = true;
+          dragSrcDate = dateStr;
+          dayEl.classList.add('dragging');
+          strip.classList.add('drag-mode');
+          strip.querySelectorAll('.week-day').forEach((el) => {
+            const elDate = el.dataset.date;
+            if (elDate !== dateStr && elDate >= today && !el.classList.contains('completed')) {
+              el.classList.add('drop-target');
+            }
+          });
+        }, 500);
+      };
+
+      dayEl.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startLongPress();
+      }, { passive: false });
+      dayEl.addEventListener('mousedown', startLongPress);
+    }
+
+    // ── Tap to toggle (for non-completed, non-past-rest days) ──
+    if (!isCompleted && !isPastAndNotScheduled) {
+      dayEl.addEventListener('click', () => {
+        if (isDragging) return;
+        toggleScheduleDay(dateStr);
+        rerenderWeekStrip();
+      });
+    }
+  });
+
+  // ── Drag move ──
+  const handleMove = (clientX, clientY) => {
+    if (!isDragging) return;
+    const target = document.elementFromPoint(clientX, clientY);
+    if (!target) return;
+    const dayEl = target.closest('.week-day');
+    strip.querySelectorAll('.week-day.drag-over').forEach((el) => el.classList.remove('drag-over'));
+    if (dayEl && dayEl.classList.contains('drop-target')) {
+      dayEl.classList.add('drag-over');
+    }
+  };
+
+  strip.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    handleMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  strip.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+
+  // ── Drag end ──
+  const handleEnd = (clientX, clientY) => {
+    clearTimeout(longPressTimer);
+    if (!isDragging) return;
+    isDragging = false;
+
+    const target = document.elementFromPoint(clientX, clientY);
+    const dayEl = target ? target.closest('.week-day') : null;
+    if (dayEl && dayEl.classList.contains('drop-target') && dragSrcDate) {
+      rescheduleDay(dragSrcDate, dayEl.dataset.date);
+      rerenderWeekStrip();
+      return;
+    }
+
+    strip.classList.remove('drag-mode');
+    strip.querySelectorAll('.dragging, .drop-target, .drag-over').forEach((el) => {
+      el.classList.remove('dragging', 'drop-target', 'drag-over');
+    });
+    dragSrcDate = null;
+  };
+
+  strip.addEventListener('touchend', (e) => handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY));
+  strip.addEventListener('mouseup', (e) => handleEnd(e.clientX, e.clientY));
+
+  const cancelDrag = () => {
+    clearTimeout(longPressTimer);
+    if (isDragging) {
+      isDragging = false;
+      strip.classList.remove('drag-mode');
+      strip.querySelectorAll('.dragging, .drop-target, .drag-over').forEach((el) => {
+        el.classList.remove('dragging', 'drop-target', 'drag-over');
+      });
+      dragSrcDate = null;
+    }
+  };
+  strip.addEventListener('mouseleave', cancelDrag);
+  strip.addEventListener('touchcancel', cancelDrag);
+
+  // ── Swipe left/right to navigate weeks ──
+  let touchStartX = 0;
+  card.addEventListener('touchstart', (e) => {
+    if (isDragging) return;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  card.addEventListener('touchend', (e) => {
+    if (isDragging) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(deltaX) > 60) {
+      if (deltaX > 0 && _weekOffset > -4) {
+        _weekOffset--;
+        rerenderWeekStrip();
+      } else if (deltaX < 0 && _weekOffset < 4) {
+        _weekOffset++;
+        rerenderWeekStrip();
+      }
+    }
+  }, { passive: true });
+}
+
+// Re-render just the schedule card without re-rendering the whole page
+function rerenderWeekStrip() {
+  const card = document.getElementById('weekScheduleCard');
+  if (!card) return;
+  const container = card.parentElement;
+  const temp = document.createElement('div');
+  temp.innerHTML = renderWeekStrip(_weekOffset);
+  const newCard = temp.firstElementChild;
+  container.replaceChild(newCard, card);
+  bindWeekStripEvents();
+}
+
+// ══════════════════════════════════════════════════════════════
+// VIEW: Routines List (Home)
+// ══════════════════════════════════════════════════════════════
 // VIEW: Routines List (Home)
 // ══════════════════════════════════════════════════════════════
 function viewRoutines() {
   const routines = Store.getRoutines();
   const active = Store.getActiveWorkout();
+  _weekOffset = 0;
 
   render(`
     <header class="header">
@@ -317,6 +650,7 @@ function viewRoutines() {
       `
           : ''
       }
+      ${renderWeekStrip(_weekOffset)}
       ${
         routines.length === 0
           ? `
@@ -362,6 +696,7 @@ function viewRoutines() {
     </main>
     ${tabBar('/')}
   `);
+  bindWeekStripEvents();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1602,6 +1937,23 @@ function finishWorkout() {
   Store.saveWorkouts(workouts);
   Store.clearActiveWorkout();
 
+  // ── Schedule stacking: if workout done on unscheduled day, consume next scheduled day ──
+  const schedule = Store.getSchedule();
+  const scheduledDays = schedule.days || {};
+  const today = toDateStr(new Date());
+  const todayScheduled = scheduledDays[today] === true;
+
+  if (!todayScheduled && Object.keys(scheduledDays).length > 0) {
+    // Find the next future scheduled day and remove it
+    const futureDates = Object.keys(scheduledDays)
+      .filter((d) => d > today)
+      .sort();
+    if (futureDates.length > 0) {
+      delete schedule.days[futureDates[0]];
+      Store.saveSchedule(schedule);
+    }
+  }
+
   Router.go('/workout/summary', { workoutId: completedWorkout.id });
 }
 
@@ -2596,6 +2948,7 @@ function exportData() {
     exercises: Store.getExercises(),
     routines: Store.getRoutines(),
     workouts: Store.getWorkouts(),
+    schedule: Store.getSchedule(),
   };
 
   const json = JSON.stringify(data, null, 2);
@@ -2648,6 +3001,7 @@ function importData() {
         Store.saveExercises(data.exercises);
         Store.saveRoutines(data.routines);
         Store.saveWorkouts(data.workouts);
+        if (data.schedule) Store.saveSchedule(data.schedule);
 
         showToast('Data imported successfully');
 
@@ -2678,6 +3032,7 @@ function clearAllData() {
   localStorage.removeItem('il_routines');
   localStorage.removeItem('il_workouts');
   localStorage.removeItem('il_active_workout');
+  localStorage.removeItem('il_schedule');
 
   // Re-seed default exercises
   Store.saveExercises(DEFAULT_EXERCISES);
@@ -2715,7 +3070,7 @@ function viewSettings() {
 
   // Calculate storage usage
   let storageBytes = 0;
-  ['il_exercises', 'il_routines', 'il_workouts', 'il_active_workout'].forEach((key) => {
+  ['il_exercises', 'il_routines', 'il_workouts', 'il_active_workout', 'il_schedule'].forEach((key) => {
     const val = localStorage.getItem(key);
     if (val) storageBytes += val.length * 2; // UTF-16
   });
