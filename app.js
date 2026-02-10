@@ -581,10 +581,12 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
         </ul>
       </section>
 
-      <button class="btn-primary btn-full btn-save" id="saveRoutineBtn">${
+    </main>
+    <div class="sticky-save-bar">
+      <button class="btn-primary btn-full" id="saveRoutineBtn">${
         isEdit ? 'Save Changes' : 'Create Routine'
       }</button>
-    </main>
+    </div>
   `);
 
   // ── Helper: rerender preserving current name ─────────────
