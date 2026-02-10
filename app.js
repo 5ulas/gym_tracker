@@ -1017,6 +1017,7 @@ function renderActiveWorkout(workout) {
             if (!prog.reason) return '';
             const iconMap = {
               increase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+              decrease: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
               maintain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
               reps_up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
             };
@@ -1347,7 +1348,19 @@ function getProgression(exercise, lastPerf) {
     };
   }
 
-  // Rule 2: Everything felt hard or missed rep target → keep same weight
+  // Rule 2: Missed bottom of rep range + all sets hard → decrease weight
+  const allHard = lastPerf.every((s) => s.difficulty === 'hard');
+  if (missedBottom && allHard && lastWeight > 0) {
+    const newWeight = Math.max(0, lastWeight - increment);
+    return {
+      weight: newWeight,
+      reps: '',
+      reason: 'decrease',
+      detail: `-${increment}kg — you only hit ${Math.round(avgReps)} reps and it felt hard`,
+    };
+  }
+
+  // Rule 3: Felt hard or missed rep target → keep same weight
   if (anyHard || missedBottom) {
     return {
       weight: lastWeight,
@@ -1357,7 +1370,7 @@ function getProgression(exercise, lastPerf) {
     };
   }
 
-  // Rule 3: Normal progression — keep weight, aim for +1 rep if below max
+  // Rule 4: Normal progression — keep weight, aim for +1 rep if below max
   if (lastReps < REP_RANGE.max) {
     return {
       weight: lastWeight,
