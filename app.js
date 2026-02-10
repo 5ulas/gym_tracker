@@ -11,21 +11,90 @@ if ('serviceWorker' in navigator) {
 
 // ── Default Exercise Library ─────────────────────────────────
 const DEFAULT_EXERCISES = [
-  { id: 'ex1', name: 'Barbell Squat', muscle: 'Legs', equipment: 'Barbell' },
+  // ── Chest ───────────────────────────────────────────────────
   { id: 'ex2', name: 'Bench Press', muscle: 'Chest', equipment: 'Barbell' },
-  { id: 'ex3', name: 'Deadlift', muscle: 'Back', equipment: 'Barbell' },
-  { id: 'ex4', name: 'Overhead Press', muscle: 'Shoulders', equipment: 'Barbell' },
-  { id: 'ex5', name: 'Barbell Row', muscle: 'Back', equipment: 'Barbell' },
-  { id: 'ex6', name: 'Pull-ups', muscle: 'Back', equipment: 'Bodyweight' },
-  { id: 'ex7', name: 'Dumbbell Curl', muscle: 'Arms', equipment: 'Dumbbell' },
-  { id: 'ex8', name: 'Tricep Pushdown', muscle: 'Arms', equipment: 'Cable' },
-  { id: 'ex9', name: 'Leg Press', muscle: 'Legs', equipment: 'Machine' },
-  { id: 'ex10', name: 'Lateral Raise', muscle: 'Shoulders', equipment: 'Dumbbell' },
-  { id: 'ex11', name: 'Romanian Deadlift', muscle: 'Legs', equipment: 'Barbell' },
   { id: 'ex12', name: 'Incline Dumbbell Press', muscle: 'Chest', equipment: 'Dumbbell' },
   { id: 'ex13', name: 'Cable Fly', muscle: 'Chest', equipment: 'Cable' },
+  { id: 'ex16', name: 'Incline Barbell Press', muscle: 'Chest', equipment: 'Barbell' },
+  { id: 'ex17', name: 'Dumbbell Bench Press', muscle: 'Chest', equipment: 'Dumbbell' },
+  { id: 'ex18', name: 'Chest Dip', muscle: 'Chest', equipment: 'Bodyweight' },
+  { id: 'ex19', name: 'Pec Deck Machine', muscle: 'Chest', equipment: 'Machine' },
+  { id: 'ex20', name: 'Decline Bench Press', muscle: 'Chest', equipment: 'Barbell' },
+  { id: 'ex21', name: 'Push-ups', muscle: 'Chest', equipment: 'Bodyweight' },
+  { id: 'ex22', name: 'Landmine Press', muscle: 'Chest', equipment: 'Barbell' },
+
+  // ── Back ────────────────────────────────────────────────────
+  { id: 'ex3', name: 'Deadlift', muscle: 'Back', equipment: 'Barbell' },
+  { id: 'ex5', name: 'Barbell Row', muscle: 'Back', equipment: 'Barbell' },
+  { id: 'ex6', name: 'Pull-ups', muscle: 'Back', equipment: 'Bodyweight' },
   { id: 'ex14', name: 'Lat Pulldown', muscle: 'Back', equipment: 'Cable' },
+  { id: 'ex23', name: 'Seated Cable Row', muscle: 'Back', equipment: 'Cable' },
+  { id: 'ex24', name: 'T-Bar Row', muscle: 'Back', equipment: 'Barbell' },
+  { id: 'ex25', name: 'Dumbbell Row', muscle: 'Back', equipment: 'Dumbbell' },
+  { id: 'ex26', name: 'Chin-ups', muscle: 'Back', equipment: 'Bodyweight' },
+  { id: 'ex27', name: 'Face Pull', muscle: 'Back', equipment: 'Cable' },
+  { id: 'ex28', name: 'Straight Arm Pulldown', muscle: 'Back', equipment: 'Cable' },
+  { id: 'ex29', name: 'Pendlay Row', muscle: 'Back', equipment: 'Barbell' },
+  { id: 'ex30', name: 'Chest Supported Row', muscle: 'Back', equipment: 'Dumbbell' },
+  { id: 'ex31', name: 'Rack Pull', muscle: 'Back', equipment: 'Barbell' },
+
+  // ── Shoulders ───────────────────────────────────────────────
+  { id: 'ex4', name: 'Overhead Press', muscle: 'Shoulders', equipment: 'Barbell' },
+  { id: 'ex10', name: 'Lateral Raise', muscle: 'Shoulders', equipment: 'Dumbbell' },
+  { id: 'ex32', name: 'Seated Dumbbell Press', muscle: 'Shoulders', equipment: 'Dumbbell' },
+  { id: 'ex33', name: 'Arnold Press', muscle: 'Shoulders', equipment: 'Dumbbell' },
+  { id: 'ex34', name: 'Cable Lateral Raise', muscle: 'Shoulders', equipment: 'Cable' },
+  { id: 'ex35', name: 'Rear Delt Fly', muscle: 'Shoulders', equipment: 'Dumbbell' },
+  { id: 'ex36', name: 'Upright Row', muscle: 'Shoulders', equipment: 'Barbell' },
+  { id: 'ex37', name: 'Machine Shoulder Press', muscle: 'Shoulders', equipment: 'Machine' },
+  { id: 'ex38', name: 'Front Raise', muscle: 'Shoulders', equipment: 'Dumbbell' },
+  { id: 'ex39', name: 'Reverse Pec Deck', muscle: 'Shoulders', equipment: 'Machine' },
+
+  // ── Arms ────────────────────────────────────────────────────
+  { id: 'ex7', name: 'Dumbbell Curl', muscle: 'Arms', equipment: 'Dumbbell' },
+  { id: 'ex8', name: 'Tricep Pushdown', muscle: 'Arms', equipment: 'Cable' },
+  { id: 'ex40', name: 'Barbell Curl', muscle: 'Arms', equipment: 'Barbell' },
+  { id: 'ex41', name: 'Hammer Curl', muscle: 'Arms', equipment: 'Dumbbell' },
+  { id: 'ex42', name: 'Skull Crushers', muscle: 'Arms', equipment: 'Barbell' },
+  { id: 'ex43', name: 'Overhead Tricep Extension', muscle: 'Arms', equipment: 'Cable' },
+  { id: 'ex44', name: 'Preacher Curl', muscle: 'Arms', equipment: 'Barbell' },
+  { id: 'ex45', name: 'Cable Curl', muscle: 'Arms', equipment: 'Cable' },
+  { id: 'ex46', name: 'Concentration Curl', muscle: 'Arms', equipment: 'Dumbbell' },
+  { id: 'ex47', name: 'Close Grip Bench Press', muscle: 'Arms', equipment: 'Barbell' },
+  { id: 'ex48', name: 'Dips (Tricep)', muscle: 'Arms', equipment: 'Bodyweight' },
+  { id: 'ex49', name: 'EZ-Bar Curl', muscle: 'Arms', equipment: 'Barbell' },
+  { id: 'ex50', name: 'Tricep Kickback', muscle: 'Arms', equipment: 'Dumbbell' },
+  { id: 'ex51', name: 'Wrist Curl', muscle: 'Arms', equipment: 'Dumbbell' },
+
+  // ── Legs ────────────────────────────────────────────────────
+  { id: 'ex1', name: 'Barbell Squat', muscle: 'Legs', equipment: 'Barbell' },
+  { id: 'ex9', name: 'Leg Press', muscle: 'Legs', equipment: 'Machine' },
+  { id: 'ex11', name: 'Romanian Deadlift', muscle: 'Legs', equipment: 'Barbell' },
   { id: 'ex15', name: 'Leg Curl', muscle: 'Legs', equipment: 'Machine' },
+  { id: 'ex52', name: 'Bulgarian Split Squat', muscle: 'Legs', equipment: 'Dumbbell' },
+  { id: 'ex53', name: 'Leg Extension', muscle: 'Legs', equipment: 'Machine' },
+  { id: 'ex54', name: 'Front Squat', muscle: 'Legs', equipment: 'Barbell' },
+  { id: 'ex55', name: 'Hip Thrust', muscle: 'Legs', equipment: 'Barbell' },
+  { id: 'ex56', name: 'Walking Lunges', muscle: 'Legs', equipment: 'Dumbbell' },
+  { id: 'ex57', name: 'Goblet Squat', muscle: 'Legs', equipment: 'Dumbbell' },
+  { id: 'ex58', name: 'Hack Squat', muscle: 'Legs', equipment: 'Machine' },
+  { id: 'ex59', name: 'Standing Calf Raise', muscle: 'Legs', equipment: 'Machine' },
+  { id: 'ex60', name: 'Seated Calf Raise', muscle: 'Legs', equipment: 'Machine' },
+  { id: 'ex61', name: 'Sumo Deadlift', muscle: 'Legs', equipment: 'Barbell' },
+  { id: 'ex62', name: 'Step Ups', muscle: 'Legs', equipment: 'Dumbbell' },
+  { id: 'ex63', name: 'Glute-Ham Raise', muscle: 'Legs', equipment: 'Bodyweight' },
+
+  // ── Core ────────────────────────────────────────────────────
+  { id: 'ex64', name: 'Plank', muscle: 'Core', equipment: 'Bodyweight' },
+  { id: 'ex65', name: 'Hanging Leg Raise', muscle: 'Core', equipment: 'Bodyweight' },
+  { id: 'ex66', name: 'Cable Crunch', muscle: 'Core', equipment: 'Cable' },
+  { id: 'ex67', name: 'Ab Wheel Rollout', muscle: 'Core', equipment: 'Other' },
+  { id: 'ex68', name: 'Russian Twist', muscle: 'Core', equipment: 'Other' },
+  { id: 'ex69', name: 'Decline Sit-ups', muscle: 'Core', equipment: 'Bodyweight' },
+  { id: 'ex70', name: 'Pallof Press', muscle: 'Core', equipment: 'Cable' },
+  { id: 'ex71', name: 'Dragon Flag', muscle: 'Core', equipment: 'Bodyweight' },
+  { id: 'ex72', name: 'Mountain Climbers', muscle: 'Core', equipment: 'Bodyweight' },
+  { id: 'ex73', name: 'Dead Bug', muscle: 'Core', equipment: 'Bodyweight' },
 ];
 
 // ── Data Layer (localStorage) ────────────────────────────────
@@ -77,6 +146,14 @@ const Store = {
 // Seed exercises on first launch
 if (!localStorage.getItem('il_exercises')) {
   Store.saveExercises(DEFAULT_EXERCISES);
+} else {
+  // Merge new default exercises for existing users
+  const existing = Store.getExercises();
+  const existingIds = new Set(existing.map((e) => e.id));
+  const newExercises = DEFAULT_EXERCISES.filter((e) => !existingIds.has(e.id));
+  if (newExercises.length > 0) {
+    Store.saveExercises([...existing, ...newExercises]);
+  }
 }
 
 // ── Tiny Router ──────────────────────────────────────────────
@@ -192,6 +269,11 @@ function tabBar(active) {
       id: '/exercises',
       label: 'Exercises',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6 12h12M6.5 17.5h11"/><path d="M4 6.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM4 12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM4 17.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>`,
+    },
+    {
+      id: '/settings',
+      label: 'Settings',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     },
   ];
   return `<nav class="tab-bar">${tabs
@@ -794,6 +876,33 @@ function getLastPerformance(exerciseId) {
   return null;
 }
 
+// ── Lookup personal best for an exercise ─────────────────────
+function getPersonalBest(exerciseId) {
+  const workouts = Store.getWorkouts();
+  let bestWeight = null;
+  let bestVolume = null;
+
+  workouts.forEach((w) => {
+    const ex = w.exercises.find((e) => e.id === exerciseId);
+    if (!ex || ex.sets.length === 0) return;
+
+    ex.sets.forEach((s) => {
+      // Best by weight
+      if (!bestWeight || s.weight > bestWeight.weight || (s.weight === bestWeight.weight && s.reps > bestWeight.reps)) {
+        bestWeight = { weight: s.weight, reps: s.reps, date: w.startedAt };
+      }
+    });
+
+    // Best total volume in a single session
+    const sessionVol = ex.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+    if (!bestVolume || sessionVol > bestVolume.volume) {
+      bestVolume = { volume: sessionVol, date: w.startedAt };
+    }
+  });
+
+  return { bestWeight, bestVolume };
+}
+
 // ══════════════════════════════════════════════════════════════
 // VIEW: Active Workout
 // ══════════════════════════════════════════════════════════════
@@ -815,6 +924,7 @@ function renderActiveWorkout(workout) {
   const isLast = exIdx === totalExercises - 1;
   const elapsed = Date.now() - workout.startedAt;
   const lastPerf = getLastPerformance(exercise.id);
+  const pb = getPersonalBest(exercise.id);
 
   render(`
     <header class="header workout-header">
@@ -849,7 +959,23 @@ function renderActiveWorkout(workout) {
             <span class="workout-exercise-name">${esc(exercise.name)}</span>
             <span class="ex-meta">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</span>
           </div>
+          <button class="btn-swap-exercise" id="btnSwapExercise" aria-label="Swap exercise" title="Swap for similar exercise">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </button>
         </div>
+
+        ${
+          pb.bestWeight && pb.bestWeight.weight > 0
+            ? `
+          <div class="personal-best-bar">
+            <span class="pb-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+            <span class="pb-label">PR</span>
+            <span class="pb-value">${pb.bestWeight.weight}kg × ${pb.bestWeight.reps}</span>
+            ${pb.bestVolume ? `<span class="pb-divider">·</span><span class="pb-value">${pb.bestVolume.volume >= 1000 ? (pb.bestVolume.volume / 1000).toFixed(1) + 'k' : pb.bestVolume.volume}kg vol</span>` : ''}
+          </div>
+        `
+            : ''
+        }
 
         ${
           lastPerf
@@ -867,6 +993,21 @@ function renderActiveWorkout(workout) {
                 .join('')}
             </div>
           </div>
+          ${(() => {
+            const prog = getProgression(exercise, lastPerf);
+            if (!prog.reason) return '';
+            const iconMap = {
+              increase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+              maintain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+              reps_up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+            };
+            return `
+              <div class="progression-badge progression-${prog.reason}">
+                <span class="progression-icon">${iconMap[prog.reason]}</span>
+                <span class="progression-detail">${esc(prog.detail)}</span>
+              </div>
+            `;
+          })()}
         `
             : ''
         }
@@ -1038,6 +1179,11 @@ function renderActiveWorkout(workout) {
     });
   });
 
+  // Swap exercise button
+  document.getElementById('btnSwapExercise').addEventListener('click', () => {
+    showSwapOverlay(exercise, workout);
+  });
+
   // Notes toggle + auto-save
   const notesToggle = document.getElementById('notesToggle');
   const notesBody = document.getElementById('notesBody');
@@ -1095,23 +1241,124 @@ function renderSetRow(set, index, completed) {
   `;
 }
 
+// ── Progression Engine ────────────────────────────────────────
+// Rep ranges per context (used for progression decisions)
+const REP_RANGE = { min: 6, max: 12 };
+// Weight increment suggestions
+const WEIGHT_INCREMENT = { Barbell: 2.5, Dumbbell: 2, Cable: 2.5, Machine: 2.5, Bodyweight: 0, Other: 2.5 };
+
+// ── Exercise Similarity Groups (for swapping) ────────────────
+// Each group lists exercise IDs that are biomechanically similar
+const SIMILARITY_GROUPS = [
+  // Horizontal press
+  ['ex2', 'ex17', 'ex16', 'ex12', 'ex20', 'ex22', 'ex21', 'ex18'],
+  // Chest isolation
+  ['ex13', 'ex19'],
+  // Vertical pull
+  ['ex6', 'ex26', 'ex14', 'ex28'],
+  // Horizontal row
+  ['ex5', 'ex24', 'ex25', 'ex23', 'ex29', 'ex30'],
+  // Deadlift / hip hinge (back)
+  ['ex3', 'ex31', 'ex61'],
+  // Overhead press
+  ['ex4', 'ex32', 'ex33', 'ex37'],
+  // Lateral delts
+  ['ex10', 'ex34', 'ex38'],
+  // Rear delts
+  ['ex35', 'ex39', 'ex27'],
+  // Bicep curl
+  ['ex7', 'ex40', 'ex41', 'ex45', 'ex46', 'ex44', 'ex49'],
+  // Tricep extension
+  ['ex8', 'ex43', 'ex42', 'ex47', 'ex48', 'ex50'],
+  // Squat pattern
+  ['ex1', 'ex54', 'ex57', 'ex58', 'ex9'],
+  // Single leg
+  ['ex52', 'ex56', 'ex62'],
+  // Hip hinge (legs)
+  ['ex11', 'ex55', 'ex63'],
+  // Knee flexion
+  ['ex15', 'ex53'],
+  // Calves
+  ['ex59', 'ex60'],
+  // Core
+  ['ex64', 'ex65', 'ex66', 'ex67', 'ex68', 'ex69', 'ex70', 'ex71', 'ex72', 'ex73'],
+];
+
+function getSimilarExercises(exerciseId) {
+  const allExercises = Store.getExercises();
+  const group = SIMILARITY_GROUPS.find((g) => g.includes(exerciseId));
+  if (!group) {
+    // Fallback: return exercises from the same muscle group
+    const exercise = allExercises.find((e) => e.id === exerciseId);
+    if (!exercise) return [];
+    return allExercises.filter((e) => e.id !== exerciseId && e.muscle === exercise.muscle);
+  }
+  const similarIds = group.filter((id) => id !== exerciseId);
+  return similarIds
+    .map((id) => allExercises.find((e) => e.id === id))
+    .filter(Boolean);
+}
+
+function getProgression(exercise, lastPerf) {
+  if (!lastPerf || lastPerf.length === 0) return { weight: '', reps: '', reason: null };
+
+  const setIdx = exercise.sets.length; // which set we're about to log
+  const idx = Math.min(setIdx, lastPerf.length - 1);
+  const lastSet = lastPerf[idx];
+  const lastWeight = lastSet.weight;
+  const lastReps = lastSet.reps;
+  const lastDiff = lastSet.difficulty || 'medium';
+
+  // Analyze ALL sets from last session for this exercise
+  const avgReps = lastPerf.reduce((sum, s) => sum + s.reps, 0) / lastPerf.length;
+  const allEasyOrMedium = lastPerf.every((s) => s.difficulty === 'easy' || s.difficulty === 'medium');
+  const anyHard = lastPerf.some((s) => s.difficulty === 'hard');
+  const hitTopOfRange = avgReps >= REP_RANGE.max;
+  const missedBottom = avgReps < REP_RANGE.min;
+
+  const increment = WEIGHT_INCREMENT[exercise.equipment] || 2.5;
+
+  // Rule 1: Hit top of rep range + felt easy/medium → increase weight, reset reps to bottom
+  if (hitTopOfRange && allEasyOrMedium && lastWeight > 0) {
+    return {
+      weight: lastWeight + increment,
+      reps: REP_RANGE.min,
+      reason: 'increase',
+      detail: `+${increment}kg — you hit ${Math.round(avgReps)} reps last time`,
+    };
+  }
+
+  // Rule 2: Everything felt hard or missed rep target → keep same weight
+  if (anyHard || missedBottom) {
+    return {
+      weight: lastWeight,
+      reps: lastReps,
+      reason: 'maintain',
+      detail: `Same weight — ${anyHard ? 'last session felt hard' : 'build up reps first'}`,
+    };
+  }
+
+  // Rule 3: Normal progression — keep weight, aim for +1 rep if below max
+  if (lastReps < REP_RANGE.max) {
+    return {
+      weight: lastWeight,
+      reps: lastReps + 1,
+      reason: 'reps_up',
+      detail: `+1 rep target — working toward ${REP_RANGE.max} reps`,
+    };
+  }
+
+  // Fallback: carry over
+  return { weight: lastWeight, reps: lastReps, reason: null };
+}
+
 // ── Default values from last performance ─────────────────────
 function getDefaultWeight(exercise, lastPerf) {
-  if (lastPerf && lastPerf.length > 0) {
-    const setIdx = exercise.sets.length; // current set being logged (0-based)
-    const idx = Math.min(setIdx, lastPerf.length - 1);
-    return lastPerf[idx].weight;
-  }
-  return '';
+  return getProgression(exercise, lastPerf).weight;
 }
 
 function getDefaultReps(exercise, lastPerf) {
-  if (lastPerf && lastPerf.length > 0) {
-    const setIdx = exercise.sets.length;
-    const idx = Math.min(setIdx, lastPerf.length - 1);
-    return lastPerf[idx].reps;
-  }
-  return '';
+  return getProgression(exercise, lastPerf).reps;
 }
 
 // ── Rest duration based on difficulty ────────────────────────
@@ -1173,6 +1420,88 @@ function skipRestTimer() {
   if (container) container.style.display = 'none';
   const w = Store.getActiveWorkout();
   if (w) renderActiveWorkout(w);
+}
+
+// ── Exercise Swap Overlay ─────────────────────────────────────
+function showSwapOverlay(currentExercise, workout) {
+  const similar = getSimilarExercises(currentExercise.id);
+
+  // Create overlay element
+  const overlay = document.createElement('div');
+  overlay.className = 'swap-overlay';
+  overlay.innerHTML = `
+    <div class="swap-panel">
+      <div class="swap-header">
+        <h2>Swap Exercise</h2>
+        <button class="btn-icon swap-close-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="swap-current">Replacing: <strong>${esc(currentExercise.name)}</strong></p>
+      ${
+        similar.length === 0
+          ? '<p class="swap-empty">No similar exercises found</p>'
+          : `
+        <ul class="swap-list">
+          ${similar
+            .map(
+              (ex) => `
+            <li class="swap-item" data-swap-id="${ex.id}">
+              <span class="ex-icon">${muscleIcon(ex.muscle)}</span>
+              <div class="ex-info">
+                <span class="ex-name">${esc(ex.name)}</span>
+                <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
+              </div>
+              <span class="swap-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg></span>
+            </li>
+          `,
+            )
+            .join('')}
+        </ul>
+      `
+      }
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Animate in
+  requestAnimationFrame(() => overlay.classList.add('active'));
+
+  // Close handler
+  const close = () => {
+    overlay.classList.remove('active');
+    setTimeout(() => overlay.remove(), 300);
+  };
+
+  overlay.querySelector('.swap-close-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+
+  // Swap handlers
+  overlay.querySelectorAll('.swap-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const newExId = item.dataset.swapId;
+      const allExercises = Store.getExercises();
+      const newEx = allExercises.find((e) => e.id === newExId);
+      if (!newEx) return;
+
+      const w = Store.getActiveWorkout();
+      if (!w) return;
+
+      // Replace the exercise in the active workout, keeping any logged sets
+      const idx = w.currentExerciseIdx;
+      w.exercises[idx] = {
+        ...newEx,
+        sets: w.exercises[idx].sets, // keep sets if any were already logged
+        notes: w.exercises[idx].notes || '',
+      };
+      Store.saveActiveWorkout(w);
+      close();
+      renderActiveWorkout(w);
+    });
+  });
 }
 
 // ── Exercise navigation ──────────────────────────────────────
@@ -1416,7 +1745,9 @@ function viewHistory() {
     <header class="header">
       <div class="header-spacer"></div>
       <h1>History</h1>
-      <div class="header-spacer"></div>
+      <button class="btn-icon" onclick="Router.go('/history/heatmap')" aria-label="Muscle heatmap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
     </header>
     <main class="content has-tabs">
       ${
@@ -2091,6 +2422,367 @@ function viewExerciseEdit(params) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+// VIEW: Muscle Heatmap
+// ══════════════════════════════════════════════════════════════
+function viewMuscleHeatmap() {
+  const workouts = Store.getWorkouts();
+  const allMuscles = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core'];
+
+  // Analyze last 4 weeks
+  const now = Date.now();
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const weeks = 4;
+
+  // Build data: { muscle: [weekCounts...] }
+  const heatmapData = {};
+  allMuscles.forEach((m) => {
+    heatmapData[m] = { sessions: new Array(weeks).fill(0), totalSets: 0, totalVolume: 0 };
+  });
+
+  workouts.forEach((w) => {
+    const weeksAgo = Math.floor((now - w.startedAt) / WEEK_MS);
+    if (weeksAgo >= weeks) return;
+    const weekIdx = weeks - 1 - weeksAgo; // 0 = oldest, weeks-1 = current
+
+    w.exercises.forEach((ex) => {
+      if (ex.sets.length === 0) return;
+      const muscle = ex.muscle;
+      if (!heatmapData[muscle]) {
+        heatmapData[muscle] = { sessions: new Array(weeks).fill(0), totalSets: 0, totalVolume: 0 };
+      }
+      heatmapData[muscle].sessions[weekIdx]++;
+      heatmapData[muscle].totalSets += ex.sets.length;
+      heatmapData[muscle].totalVolume += ex.sets.reduce((s, set) => s + set.weight * set.reps, 0);
+    });
+  });
+
+  // Find max sessions in any single week for color scaling
+  let maxWeekSessions = 1;
+  allMuscles.forEach((m) => {
+    const d = heatmapData[m];
+    if (d) d.sessions.forEach((s) => { if (s > maxWeekSessions) maxWeekSessions = s; });
+  });
+
+  // Week labels
+  const weekLabels = [];
+  for (let i = 0; i < weeks; i++) {
+    const wDate = new Date(now - (weeks - 1 - i) * WEEK_MS);
+    weekLabels.push(wDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  }
+
+  render(`
+    <header class="header">
+      <button class="btn-back" onclick="Router.go('/history')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h1>Muscle Heatmap</h1>
+      <div class="header-spacer"></div>
+    </header>
+    <main class="content">
+      <p class="heatmap-subtitle">Training frequency — last ${weeks} weeks</p>
+
+      <!-- Heatmap Grid -->
+      <div class="heatmap-grid">
+        <div class="heatmap-header-row">
+          <span class="heatmap-muscle-label"></span>
+          ${weekLabels.map((l) => `<span class="heatmap-week-label">${l}</span>`).join('')}
+        </div>
+        ${allMuscles
+          .map((muscle) => {
+            const d = heatmapData[muscle] || { sessions: new Array(weeks).fill(0), totalSets: 0, totalVolume: 0 };
+            return `
+            <div class="heatmap-row">
+              <span class="heatmap-muscle-label">${muscleIcon(muscle)} ${esc(muscle)}</span>
+              ${d.sessions
+                .map((count) => {
+                  const intensity = count / maxWeekSessions;
+                  const level = count === 0 ? 0 : intensity < 0.33 ? 1 : intensity < 0.66 ? 2 : 3;
+                  return `<span class="heatmap-cell heatmap-level-${level}" title="${count} session${count !== 1 ? 's' : ''}">${count > 0 ? count : ''}</span>`;
+                })
+                .join('')}
+            </div>
+          `;
+          })
+          .join('')}
+      </div>
+
+      <!-- Heatmap Legend -->
+      <div class="heatmap-legend">
+        <span class="heatmap-legend-label">Less</span>
+        <span class="heatmap-cell heatmap-level-0 heatmap-legend-cell"></span>
+        <span class="heatmap-cell heatmap-level-1 heatmap-legend-cell"></span>
+        <span class="heatmap-cell heatmap-level-2 heatmap-legend-cell"></span>
+        <span class="heatmap-cell heatmap-level-3 heatmap-legend-cell"></span>
+        <span class="heatmap-legend-label">More</span>
+      </div>
+
+      <!-- Summary Cards -->
+      <h2 class="section-title" style="margin-top: 24px;">Summary (4 Weeks)</h2>
+      <div class="heatmap-summary">
+        ${allMuscles
+          .map((muscle) => {
+            const d = heatmapData[muscle] || { sessions: new Array(weeks).fill(0), totalSets: 0, totalVolume: 0 };
+            const totalSessions = d.sessions.reduce((a, b) => a + b, 0);
+            return `
+            <div class="heatmap-summary-card">
+              <div class="heatmap-summary-header">
+                <span class="heatmap-summary-icon">${muscleIcon(muscle)}</span>
+                <span class="heatmap-summary-name">${esc(muscle)}</span>
+              </div>
+              <div class="heatmap-summary-stats">
+                <div class="heatmap-summary-stat">
+                  <span class="heatmap-summary-val">${totalSessions}</span>
+                  <span class="heatmap-summary-label">Sessions</span>
+                </div>
+                <div class="heatmap-summary-stat">
+                  <span class="heatmap-summary-val">${d.totalSets}</span>
+                  <span class="heatmap-summary-label">Sets</span>
+                </div>
+                <div class="heatmap-summary-stat">
+                  <span class="heatmap-summary-val">${d.totalVolume >= 1000 ? (d.totalVolume / 1000).toFixed(1) + 'k' : d.totalVolume}</span>
+                  <span class="heatmap-summary-label">Vol (kg)</span>
+                </div>
+              </div>
+            </div>
+          `;
+          })
+          .join('')}
+      </div>
+    </main>
+  `);
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT DATA
+// ══════════════════════════════════════════════════════════════
+
+function exportData() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    exercises: Store.getExercises(),
+    routines: Store.getRoutines(),
+    workouts: Store.getWorkouts(),
+  };
+
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ironlog-backup-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast('Backup downloaded successfully');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+
+  input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = JSON.parse(evt.target.result);
+
+        // Validate structure
+        if (!data || typeof data !== 'object') {
+          showToast('Invalid backup file', true);
+          return;
+        }
+        if (!Array.isArray(data.exercises) || !Array.isArray(data.routines) || !Array.isArray(data.workouts)) {
+          showToast('Invalid backup format — missing data', true);
+          return;
+        }
+
+        // Count what's being imported
+        const counts = `${data.exercises.length} exercises, ${data.routines.length} routines, ${data.workouts.length} workouts`;
+
+        if (!confirm(`Import this backup?\n\n${counts}\n\nThis will REPLACE all your current data. Make sure you've exported a backup first.`)) {
+          return;
+        }
+
+        Store.saveExercises(data.exercises);
+        Store.saveRoutines(data.routines);
+        Store.saveWorkouts(data.workouts);
+
+        showToast('Data imported successfully');
+
+        // Refresh the view
+        setTimeout(() => Router.go('/settings'), 300);
+      } catch (err) {
+        showToast('Failed to read file — invalid JSON', true);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  input.click();
+}
+
+function clearAllData() {
+  const workoutCount = Store.getWorkouts().length;
+  const routineCount = Store.getRoutines().length;
+
+  if (!confirm(`Delete ALL data?\n\n${routineCount} routines, ${workoutCount} workouts\n\nThis cannot be undone!`)) {
+    return;
+  }
+  if (!confirm('Are you absolutely sure? All workout history will be permanently deleted.')) {
+    return;
+  }
+
+  localStorage.removeItem('il_exercises');
+  localStorage.removeItem('il_routines');
+  localStorage.removeItem('il_workouts');
+  localStorage.removeItem('il_active_workout');
+
+  // Re-seed default exercises
+  Store.saveExercises(DEFAULT_EXERCISES);
+
+  showToast('All data cleared');
+  setTimeout(() => Router.go('/'), 300);
+}
+
+// ── Toast notification ────────────────────────────────────────
+function showToast(message, isError = false) {
+  // Remove existing toast
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${isError ? 'toast-error' : 'toast-success'}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// VIEW: Settings
+// ══════════════════════════════════════════════════════════════
+function viewSettings() {
+  const workouts = Store.getWorkouts();
+  const routines = Store.getRoutines();
+  const exercises = Store.getExercises();
+
+  // Calculate storage usage
+  let storageBytes = 0;
+  ['il_exercises', 'il_routines', 'il_workouts', 'il_active_workout'].forEach((key) => {
+    const val = localStorage.getItem(key);
+    if (val) storageBytes += val.length * 2; // UTF-16
+  });
+  const storageKB = (storageBytes / 1024).toFixed(1);
+
+  // Last workout date
+  const lastWorkout = workouts.length > 0 ? workouts[workouts.length - 1] : null;
+  const lastWorkoutText = lastWorkout
+    ? formatDate(lastWorkout.startedAt)
+    : 'No workouts yet';
+
+  render(`
+    <header class="header">
+      <div class="header-spacer"></div>
+      <h1>Settings</h1>
+      <div class="header-spacer"></div>
+    </header>
+    <main class="content has-tabs">
+      <!-- Data Overview -->
+      <section class="settings-section">
+        <h2 class="section-title">Your Data</h2>
+        <div class="settings-stats">
+          <div class="settings-stat-card">
+            <span class="settings-stat-val">${workouts.length}</span>
+            <span class="settings-stat-label">Workouts</span>
+          </div>
+          <div class="settings-stat-card">
+            <span class="settings-stat-val">${routines.length}</span>
+            <span class="settings-stat-label">Routines</span>
+          </div>
+          <div class="settings-stat-card">
+            <span class="settings-stat-val">${exercises.length}</span>
+            <span class="settings-stat-label">Exercises</span>
+          </div>
+          <div class="settings-stat-card">
+            <span class="settings-stat-val">${storageKB} KB</span>
+            <span class="settings-stat-label">Storage</span>
+          </div>
+        </div>
+        <p class="settings-hint">Last workout: ${esc(lastWorkoutText)}</p>
+      </section>
+
+      <!-- Export / Import -->
+      <section class="settings-section">
+        <h2 class="section-title">Backup & Restore</h2>
+        <p class="settings-description">Export your data as a JSON file to keep a backup or transfer to another device. Import a backup to restore your data.</p>
+
+        <div class="settings-actions">
+          <button class="btn-settings-action" id="btnExport">
+            <span class="settings-action-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </span>
+            <div class="settings-action-text">
+              <span class="settings-action-name">Export Data</span>
+              <span class="settings-action-desc">Download a JSON backup file</span>
+            </div>
+          </button>
+
+          <button class="btn-settings-action" id="btnImport">
+            <span class="settings-action-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </span>
+            <div class="settings-action-text">
+              <span class="settings-action-name">Import Data</span>
+              <span class="settings-action-desc">Restore from a backup file</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="settings-section">
+        <h2 class="section-title danger-title">Danger Zone</h2>
+        <button class="btn-settings-action danger" id="btnClearData">
+          <span class="settings-action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </span>
+          <div class="settings-action-text">
+            <span class="settings-action-name">Clear All Data</span>
+            <span class="settings-action-desc">Delete all workouts, routines & exercises</span>
+          </div>
+        </button>
+      </section>
+
+      <!-- About -->
+      <section class="settings-section settings-about">
+        <p class="settings-about-text">Iron Log v1.0</p>
+        <p class="settings-about-sub">Data stored locally on this device</p>
+      </section>
+    </main>
+    ${tabBar('/settings')}
+  `);
+
+  // Bind actions
+  document.getElementById('btnExport').addEventListener('click', exportData);
+  document.getElementById('btnImport').addEventListener('click', importData);
+  document.getElementById('btnClearData').addEventListener('click', clearAllData);
+}
+
 // ── Register Routes ──────────────────────────────────────────
 Router.on('/', viewRoutines);
 Router.on('/exercises', viewExercises);
@@ -2104,6 +2796,8 @@ Router.on('/workout/summary', (p) => viewWorkoutSummary(p));
 Router.on('/history', viewHistory);
 Router.on('/history/workout', (p) => viewWorkoutDetail(p));
 Router.on('/history/progress', (p) => viewProgress(p));
+Router.on('/history/heatmap', viewMuscleHeatmap);
+Router.on('/settings', viewSettings);
 
 // ── Boot ─────────────────────────────────────────────────────
 Router.start();
