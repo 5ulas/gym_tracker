@@ -598,11 +598,19 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   document.getElementById('saveRoutineBtn').addEventListener('click', () => {
     const name = document.getElementById('routineName').value.trim();
     if (!name) {
-      shakeElement(document.getElementById('routineName'));
+      const nameInput = document.getElementById('routineName');
+      shakeElement(nameInput);
+      showFormError(nameInput.closest('label'), 'Please enter a routine name');
+      nameInput.addEventListener('input', () => {
+        const err = document.querySelector('.form-error');
+        if (err) err.remove();
+      }, { once: true });
       return;
     }
     if (selected.length === 0) {
-      shakeElement(document.getElementById('selectedList'));
+      const list = document.getElementById('selectedList');
+      shakeElement(list);
+      showFormError(list, 'Add at least one exercise');
       return;
     }
 
@@ -780,6 +788,15 @@ function renderAvailableExercises(exercises, selected) {
 function shakeElement(el) {
   el.classList.add('shake');
   setTimeout(() => el.classList.remove('shake'), 500);
+}
+
+// Inline form-error helper
+function showFormError(anchorEl, message) {
+  document.querySelectorAll('.form-error').forEach((el) => el.remove());
+  const div = document.createElement('div');
+  div.className = 'form-error';
+  div.textContent = message;
+  anchorEl.insertAdjacentElement('afterend', div);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1322,7 +1339,7 @@ function getProgression(exercise, lastPerf) {
   if (hitTopOfRange && allEasyOrMedium && lastWeight > 0) {
     return {
       weight: lastWeight + increment,
-      reps: REP_RANGE.min,
+      reps: '',
       reason: 'increase',
       detail: `+${increment}kg — you hit ${Math.round(avgReps)} reps last time`,
     };
