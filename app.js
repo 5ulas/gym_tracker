@@ -1,5 +1,5 @@
 /* ============================================================
-   Iron Log — Gym Progress Tracker PWA
+   ArkLog — Gym Progress Tracker PWA
    Phase 1: Foundation, Exercise Library & Routine Creator
    Phase 2: The Active Logger
    ============================================================ */
@@ -265,7 +265,7 @@ function tabBar(active) {
   const tabs = [
     {
       id: '/',
-      label: 'Routines',
+      label: 'Workouts',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
     },
     {
@@ -395,18 +395,13 @@ const DUMBBELL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 
 // Current week offset state (module-level so it persists across re-renders within the same view)
 let _weekOffset = 0;
+let _progressRange = 30; // days: 14, 30, 90, or 0 for All
 
 // Render the weekly schedule strip with navigation
 function renderWeekStrip(weekOffset) {
   const days = getWeekScheduleStatus(weekOffset);
   const labels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
   const weekLabel = formatWeekLabel(weekOffset);
-
-  // Stats for this week
-  const completed = days.filter((d) => d.status === 'completed').length;
-  const scheduled = days.filter((d) => d.status === 'scheduled').length;
-  const missed = days.filter((d) => d.status === 'missed').length;
-  const total = completed + scheduled + missed;
 
   // Can navigate ±4 weeks
   const canPrev = weekOffset > -4;
@@ -447,13 +442,6 @@ function renderWeekStrip(weekOffset) {
           )
           .join('')}
       </div>
-      ${total > 0 ? `
-        <div class="week-stats">
-          ${completed > 0 ? `<span class="week-stat completed">${completed} done</span>` : ''}
-          ${scheduled > 0 ? `<span class="week-stat scheduled">${scheduled} planned</span>` : ''}
-          ${missed > 0 ? `<span class="week-stat missed">${missed} missed</span>` : ''}
-        </div>
-      ` : `<div class="week-stats"><span class="week-stat rest">No workouts planned</span></div>`}
     </div>
   `;
 }
@@ -480,21 +468,61 @@ function bindWeekStripEvents() {
     });
   }
 
-  // ── Tap to toggle scheduled/rest (only for today and future, non-completed days) ──
+  // ── Day interactions: tap to toggle/navigate, long-press to drag ──
   let dragSrcDate = null;
   let longPressTimer = null;
   let isDragging = false;
-  const today = toDateStr(new Date());
+  let tapBlocked = false;
 
   strip.querySelectorAll('.week-day').forEach((dayEl) => {
     const dateStr = dayEl.dataset.date;
     const isCompleted = dayEl.classList.contains('completed');
-    const isPastAndNotScheduled = dateStr < today && !dayEl.classList.contains('missed') && !dayEl.classList.contains('scheduled');
     const isScheduledOrMissed = dayEl.classList.contains('scheduled') || dayEl.classList.contains('missed');
 
-    // ── Long press to drag (only scheduled/missed days in current/future) ──
+    // ── Tap action for this day ──
+    const handleTap = () => {
+      if (isDragging || tapBlocked) return;
+      if (isCompleted) {
+        const workouts = Store.getWorkouts();
+        const match = workouts.find((w) => toDateStr(w.finishedAt) === dateStr);
+        if (match) Router.go('/history/workout', { workoutId: match.id });
+      } else {
+        toggleScheduleDay(dateStr);
+        rerenderWeekStrip();
+      }
+    };
+
+    // ── Touch handling: unified for all days ──
+    dayEl.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      tapBlocked = false;
+      if (isScheduledOrMissed) {
+        longPressTimer = setTimeout(() => {
+          tapBlocked = true;
+          isDragging = true;
+          dragSrcDate = dateStr;
+          dayEl.classList.add('dragging');
+          strip.classList.add('drag-mode');
+          strip.querySelectorAll('.week-day').forEach((el) => {
+            const elDate = el.dataset.date;
+            if (elDate !== dateStr && !el.classList.contains('completed')) {
+              el.classList.add('drop-target');
+            }
+          });
+        }, 500);
+      }
+    }, { passive: false });
+
+    dayEl.addEventListener('touchend', (e) => {
+      clearTimeout(longPressTimer);
+      if (!isDragging && !tapBlocked) {
+        handleTap();
+      }
+    }, { passive: true });
+
+    // ── Mouse: long-press for drag ──
     if (isScheduledOrMissed) {
-      const startLongPress = () => {
+      dayEl.addEventListener('mousedown', () => {
         longPressTimer = setTimeout(() => {
           isDragging = true;
           dragSrcDate = dateStr;
@@ -502,28 +530,17 @@ function bindWeekStripEvents() {
           strip.classList.add('drag-mode');
           strip.querySelectorAll('.week-day').forEach((el) => {
             const elDate = el.dataset.date;
-            if (elDate !== dateStr && elDate >= today && !el.classList.contains('completed')) {
+            if (elDate !== dateStr && !el.classList.contains('completed')) {
               el.classList.add('drop-target');
             }
           });
         }, 500);
-      };
-
-      dayEl.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startLongPress();
-      }, { passive: false });
-      dayEl.addEventListener('mousedown', startLongPress);
-    }
-
-    // ── Tap to toggle (for non-completed, non-past-rest days) ──
-    if (!isCompleted && !isPastAndNotScheduled) {
-      dayEl.addEventListener('click', () => {
-        if (isDragging) return;
-        toggleScheduleDay(dateStr);
-        rerenderWeekStrip();
       });
     }
+
+    // ── Mouse click (desktop) ──
+    dayEl.addEventListener('click', () => handleTap());
+    dayEl.style.cursor = 'pointer';
   });
 
   // ── Drag move ──
@@ -628,8 +645,8 @@ function viewRoutines() {
 
   render(`
     <header class="header">
-      <h1>My Routines</h1>
-      <button class="btn-icon" onclick="Router.go('/routine/new')" aria-label="New routine">
+      <h1>Workouts</h1>
+      <button class="btn-icon" onclick="Router.go('/routine/new')" aria-label="New workout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
     </header>
@@ -658,8 +675,8 @@ function viewRoutines() {
           <div class="empty-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           </div>
-          <p class="empty-title">No routines yet</p>
-          <p class="empty-sub">Tap + to create your first workout routine</p>
+          <p class="empty-title">No workouts yet</p>
+          <p class="empty-sub">Tap + to create your first workout</p>
         </div>
       `
           : `
@@ -1272,13 +1289,187 @@ function viewActiveWorkout() {
 
 function renderActiveWorkout(workout) {
   const exIdx = workout.currentExerciseIdx;
-  const exercise = workout.exercises[exIdx];
   const totalExercises = workout.exercises.length;
-  const isFirst = exIdx === 0;
-  const isLast = exIdx === totalExercises - 1;
   const elapsed = Date.now() - workout.startedAt;
-  const lastPerf = getLastPerformance(exercise.id);
-  const pb = getPersonalBest(exercise.id);
+  const completedExercises = workout.exercises.filter((ex) => ex.sets.length > 0).length;
+
+  // Build exercise cards
+  const exerciseCardsHtml = workout.exercises
+    .map((exercise, idx) => {
+      const isActive = idx === exIdx;
+      const lastPerf = getLastPerformance(exercise.id);
+      const pb = getPersonalBest(exercise.id);
+      const setCount = exercise.sets.length;
+
+      if (!isActive) {
+        // ── Collapsed card ─────────────────────────────────────
+        const setsInfo =
+          setCount > 0
+            ? exercise.sets.map((s) => `${s.weight}kg×${s.reps}`).join(', ')
+            : 'No sets yet';
+        return `
+          <div class="workout-exercise-card collapsed" data-ex-idx="${idx}">
+            <div class="workout-exercise-header collapsed-header">
+              <span class="ex-icon">${muscleIcon(exercise.muscle)}</span>
+              <div class="ex-info">
+                <span class="workout-exercise-name">${esc(exercise.name)}</span>
+                <span class="ex-meta collapsed-sets">${setCount > 0 ? `${setCount} set${setCount !== 1 ? 's' : ''} — ${setsInfo}` : setsInfo}</span>
+              </div>
+              ${setCount > 0 ? '<span class="collapsed-check"><svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>' : '<span class="collapsed-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>'}
+            </div>
+          </div>
+        `;
+      }
+
+      // ── Expanded (active) card ────────────────────────────────
+      return `
+        <div class="workout-exercise-card active-card" id="activeExerciseCard" data-ex-idx="${idx}">
+          <div class="workout-exercise-header">
+            <span class="ex-icon">${muscleIcon(exercise.muscle)}</span>
+            <div class="ex-info">
+              <span class="workout-exercise-name">${esc(exercise.name)}</span>
+              <span class="ex-meta">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</span>
+            </div>
+            <button class="btn-swap-exercise" id="btnSwapExercise" aria-label="Swap exercise" title="Swap for similar exercise">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            </button>
+          </div>
+
+          ${
+            pb.bestWeight && pb.bestWeight.weight > 0
+              ? `
+            <div class="personal-best-bar">
+              <span class="pb-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+              <span class="pb-label">PR</span>
+              <span class="pb-value">${pb.bestWeight.weight}kg × ${pb.bestWeight.reps}</span>
+              ${pb.bestVolume ? `<span class="pb-divider">·</span><span class="pb-value">${pb.bestVolume.volume >= 1000 ? (pb.bestVolume.volume / 1000).toFixed(1) + 'k' : pb.bestVolume.volume}kg vol</span>` : ''}
+            </div>
+          `
+              : ''
+          }
+
+          ${
+            lastPerf
+              ? `
+            <div class="last-performance">
+              <span class="last-perf-label">Last time</span>
+              <div class="last-perf-sets">
+                ${lastPerf
+                  .map(
+                    (s, i) =>
+                      `<span class="last-perf-set">${s.weight}${s.weight ? 'kg' : ''} × ${
+                        s.reps
+                      }</span>`,
+                  )
+                  .join('')}
+              </div>
+            </div>
+            ${(() => {
+              const prog = getProgression(exercise, lastPerf);
+              if (!prog.reason) return '';
+              const iconMap = {
+                increase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+                decrease: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+                maintain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+                reps_up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+              };
+              return `
+                <div class="progression-badge progression-${prog.reason}">
+                  <span class="progression-icon">${iconMap[prog.reason]}</span>
+                  <span class="progression-detail">${esc(prog.detail)}</span>
+                </div>
+              `;
+            })()}
+          `
+              : ''
+          }
+
+          <!-- Sets Table -->
+          <div class="sets-container">
+            <div class="sets-table-header">
+              <span class="set-col-num">Set</span>
+              <span class="set-col-weight">kg</span>
+              <span class="set-col-reps">Reps</span>
+              <span class="set-col-diff">Effort</span>
+              <span class="set-col-action"></span>
+            </div>
+
+            <div class="sets-list" id="setsList">
+              ${exercise.sets.map((s, i) => renderSetRow(s, i, true)).join('')}
+            </div>
+
+            <!-- New Set Input Row -->
+            <div class="set-input-row" id="setInputRow">
+              <span class="set-col-num set-number">${exercise.sets.length + 1}</span>
+              <div class="set-col-weight">
+                <input type="number" id="inputWeight" class="set-input" placeholder="0"
+                       inputmode="decimal" step="0.5" min="0"
+                       value="${getDefaultWeight(exercise, lastPerf)}" />
+              </div>
+              <div class="set-col-reps">
+                <input type="number" id="inputReps" class="set-input" placeholder="0"
+                       inputmode="numeric" step="1" min="0"
+                       value="${getDefaultReps(exercise, lastPerf)}" />
+              </div>
+              <div class="set-col-diff">
+                <div class="difficulty-selector" id="difficultySelector">
+                  <button class="diff-btn" data-diff="easy" title="Easy">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                  </button>
+                  <button class="diff-btn active" data-diff="medium" title="Medium">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                  </button>
+                  <button class="diff-btn" data-diff="hard" title="Hard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="set-col-action">
+                <button class="btn-log-set" id="btnLogSet" aria-label="Log set">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rest Timer -->
+          <div class="rest-timer-container" id="restTimerContainer" style="display: none;">
+            <div class="rest-timer-ring" id="restTimerRing">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg-elevated)" stroke-width="8"/>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--primary)" stroke-width="8"
+                        stroke-dasharray="326.73" stroke-dashoffset="0" stroke-linecap="round"
+                        transform="rotate(-90 60 60)" id="restTimerCircle"/>
+              </svg>
+              <span class="rest-timer-text" id="restTimerText">0:00</span>
+            </div>
+            <span class="rest-timer-label">Rest</span>
+            <div class="rest-timer-controls">
+              <button class="rest-adjust-btn" onclick="adjustRestTimer(-15)">-15s</button>
+              <button class="rest-skip-btn" onclick="skipRestTimer()">Skip</button>
+              <button class="rest-adjust-btn" onclick="adjustRestTimer(15)">+15s</button>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="workout-notes-inline">
+            <button class="notes-toggle" id="notesToggle" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Notes
+              <span class="notes-indicator ${
+                exercise.notes ? 'has-notes' : ''
+              }" id="notesIndicator"></span>
+            </button>
+            <div class="notes-body" id="notesBody" style="display: none;">
+              <textarea class="notes-textarea" id="notesTextarea" placeholder="Add notes for this exercise…" rows="3">${esc(
+                exercise.notes || '',
+              )}</textarea>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
 
   render(`
     <header class="header workout-header">
@@ -1299,181 +1490,23 @@ function renderActiveWorkout(workout) {
       <div class="workout-progress">
         <div class="workout-progress-bar">
           <div class="workout-progress-fill" style="width: ${
-            ((exIdx + 1) / totalExercises) * 100
+            (completedExercises / totalExercises) * 100
           }%"></div>
         </div>
-        <span class="workout-progress-text">${exIdx + 1} / ${totalExercises}</span>
+        <span class="workout-progress-text">${completedExercises} / ${totalExercises}</span>
       </div>
 
-      <!-- Exercise Card -->
-      <div class="workout-exercise-card">
-        <div class="workout-exercise-header">
-          <span class="ex-icon">${muscleIcon(exercise.muscle)}</span>
-          <div class="ex-info">
-            <span class="workout-exercise-name">${esc(exercise.name)}</span>
-            <span class="ex-meta">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</span>
-          </div>
-          <button class="btn-swap-exercise" id="btnSwapExercise" aria-label="Swap exercise" title="Swap for similar exercise">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          </button>
-        </div>
-
-        ${
-          pb.bestWeight && pb.bestWeight.weight > 0
-            ? `
-          <div class="personal-best-bar">
-            <span class="pb-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
-            <span class="pb-label">PR</span>
-            <span class="pb-value">${pb.bestWeight.weight}kg × ${pb.bestWeight.reps}</span>
-            ${pb.bestVolume ? `<span class="pb-divider">·</span><span class="pb-value">${pb.bestVolume.volume >= 1000 ? (pb.bestVolume.volume / 1000).toFixed(1) + 'k' : pb.bestVolume.volume}kg vol</span>` : ''}
-          </div>
-        `
-            : ''
-        }
-
-        ${
-          lastPerf
-            ? `
-          <div class="last-performance">
-            <span class="last-perf-label">Last time</span>
-            <div class="last-perf-sets">
-              ${lastPerf
-                .map(
-                  (s, i) =>
-                    `<span class="last-perf-set">${s.weight}${s.weight ? 'kg' : ''} × ${
-                      s.reps
-                    }</span>`,
-                )
-                .join('')}
-            </div>
-          </div>
-          ${(() => {
-            const prog = getProgression(exercise, lastPerf);
-            if (!prog.reason) return '';
-            const iconMap = {
-              increase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
-              decrease: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
-              maintain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
-              reps_up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
-            };
-            return `
-              <div class="progression-badge progression-${prog.reason}">
-                <span class="progression-icon">${iconMap[prog.reason]}</span>
-                <span class="progression-detail">${esc(prog.detail)}</span>
-              </div>
-            `;
-          })()}
-        `
-            : ''
-        }
-
-        <!-- Sets Table -->
-        <div class="sets-container">
-          <div class="sets-table-header">
-            <span class="set-col-num">Set</span>
-            <span class="set-col-weight">kg</span>
-            <span class="set-col-reps">Reps</span>
-            <span class="set-col-diff">Effort</span>
-            <span class="set-col-action"></span>
-          </div>
-
-          <div class="sets-list" id="setsList">
-            ${exercise.sets.map((s, i) => renderSetRow(s, i, true)).join('')}
-          </div>
-
-          <!-- New Set Input Row -->
-          <div class="set-input-row" id="setInputRow">
-            <span class="set-col-num set-number">${exercise.sets.length + 1}</span>
-            <div class="set-col-weight">
-              <input type="number" id="inputWeight" class="set-input" placeholder="0"
-                     inputmode="decimal" step="0.5" min="0"
-                     value="${getDefaultWeight(exercise, lastPerf)}" />
-            </div>
-            <div class="set-col-reps">
-              <input type="number" id="inputReps" class="set-input" placeholder="0"
-                     inputmode="numeric" step="1" min="0"
-                     value="${getDefaultReps(exercise, lastPerf)}" />
-            </div>
-            <div class="set-col-diff">
-              <div class="difficulty-selector" id="difficultySelector">
-                <button class="diff-btn" data-diff="easy" title="Easy">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                </button>
-                <button class="diff-btn active" data-diff="medium" title="Medium">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                </button>
-                <button class="diff-btn" data-diff="hard" title="Hard">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                </button>
-              </div>
-            </div>
-            <div class="set-col-action">
-              <button class="btn-log-set" id="btnLogSet" aria-label="Log set">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Rest Timer -->
-        <div class="rest-timer-container" id="restTimerContainer" style="display: none;">
-          <div class="rest-timer-ring" id="restTimerRing">
-            <svg viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg-elevated)" stroke-width="8"/>
-              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--primary)" stroke-width="8"
-                      stroke-dasharray="326.73" stroke-dashoffset="0" stroke-linecap="round"
-                      transform="rotate(-90 60 60)" id="restTimerCircle"/>
-            </svg>
-            <span class="rest-timer-text" id="restTimerText">0:00</span>
-          </div>
-          <span class="rest-timer-label">Rest</span>
-          <div class="rest-timer-controls">
-            <button class="rest-adjust-btn" onclick="adjustRestTimer(-15)">-15s</button>
-            <button class="rest-skip-btn" onclick="skipRestTimer()">Skip</button>
-            <button class="rest-adjust-btn" onclick="adjustRestTimer(15)">+15s</button>
-          </div>
-        </div>
+      <!-- All Exercise Cards -->
+      <div class="workout-exercises-list" id="workoutExercisesList">
+        ${exerciseCardsHtml}
       </div>
 
-      <!-- Notes -->
-      <div class="workout-notes">
-        <button class="notes-toggle" id="notesToggle" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          Notes
-          <span class="notes-indicator ${
-            exercise.notes ? 'has-notes' : ''
-          }" id="notesIndicator"></span>
+      <!-- Finish Workout Button -->
+      <div class="workout-finish-section">
+        <button class="btn-finish-workout" onclick="finishWorkout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Finish Workout
         </button>
-        <div class="notes-body" id="notesBody" style="display: none;">
-          <textarea class="notes-textarea" id="notesTextarea" placeholder="Add notes for this exercise…" rows="3">${esc(
-            exercise.notes || '',
-          )}</textarea>
-        </div>
-      </div>
-
-      <!-- Exercise Nav -->
-      <div class="workout-nav">
-        <button class="btn-nav ${isFirst ? 'disabled' : ''}" onclick="${
-    isFirst ? '' : 'navigateExercise(-1)'
-  }" ${isFirst ? 'disabled' : ''}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-          Previous
-        </button>
-        ${
-          isLast
-            ? `
-          <button class="btn-finish-workout" onclick="finishWorkout()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Finish
-          </button>
-        `
-            : `
-          <button class="btn-nav btn-nav-next" onclick="navigateExercise(1)">
-            Next
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
-          </button>
-        `
-        }
       </div>
     </main>
   `);
@@ -1490,38 +1523,59 @@ function renderActiveWorkout(workout) {
     elapsedEl.textContent = formatDuration(Date.now() - w.startedAt);
   }, 1000);
 
+  // Collapsed card click → expand that exercise
+  document.querySelectorAll('.workout-exercise-card.collapsed').forEach((card) => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.exIdx, 10);
+      const w = Store.getActiveWorkout();
+      if (!w) return;
+      w.currentExerciseIdx = idx;
+      Store.saveActiveWorkout(w);
+      renderActiveWorkout(w);
+    });
+  });
+
   // Difficulty selector
   let selectedDifficulty = 'medium';
-  document.getElementById('difficultySelector').addEventListener('click', (e) => {
-    const btn = e.target.closest('.diff-btn');
-    if (!btn) return;
-    document.querySelectorAll('.diff-btn').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedDifficulty = btn.dataset.diff;
-  });
+  const diffSelector = document.getElementById('difficultySelector');
+  if (diffSelector) {
+    diffSelector.addEventListener('click', (e) => {
+      const btn = e.target.closest('.diff-btn');
+      if (!btn) return;
+      document.querySelectorAll('.diff-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDifficulty = btn.dataset.diff;
+    });
+  }
 
   // Log set
-  document.getElementById('btnLogSet').addEventListener('click', () => {
-    const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
-    const reps = parseInt(document.getElementById('inputReps').value) || 0;
+  const btnLogSet = document.getElementById('btnLogSet');
+  if (btnLogSet) {
+    btnLogSet.addEventListener('click', () => {
+      const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
+      const reps = parseInt(document.getElementById('inputReps').value) || 0;
 
-    if (reps === 0) {
-      shakeElement(document.getElementById('inputReps'));
-      return;
-    }
+      if (reps === 0) {
+        shakeElement(document.getElementById('inputReps'));
+        return;
+      }
 
-    const w = Store.getActiveWorkout();
-    w.exercises[w.currentExerciseIdx].sets.push({
-      weight,
-      reps,
-      difficulty: selectedDifficulty,
-      loggedAt: Date.now(),
+      const w = Store.getActiveWorkout();
+      w.exercises[w.currentExerciseIdx].sets.push({
+        weight,
+        reps,
+        difficulty: selectedDifficulty,
+        loggedAt: Date.now(),
+      });
+      Store.saveActiveWorkout(w);
+
+      // Re-render immediately to show the new set and update set counter
+      renderActiveWorkout(w);
+
+      // Start rest timer (after re-render so DOM exists)
+      showRestTimer(getRestDuration(selectedDifficulty), w);
     });
-    Store.saveActiveWorkout(w);
-
-    // Start rest timer
-    showRestTimer(getRestDuration(selectedDifficulty), w);
-  });
+  }
 
   // Delete set buttons
   document.querySelectorAll('.btn-delete-set').forEach((btn) => {
@@ -1535,9 +1589,13 @@ function renderActiveWorkout(workout) {
   });
 
   // Swap exercise button
-  document.getElementById('btnSwapExercise').addEventListener('click', () => {
-    showSwapOverlay(exercise, workout);
-  });
+  const btnSwap = document.getElementById('btnSwapExercise');
+  if (btnSwap) {
+    btnSwap.addEventListener('click', () => {
+      const exercise = workout.exercises[exIdx];
+      showSwapOverlay(exercise, workout);
+    });
+  }
 
   // Notes toggle + auto-save
   const notesToggle = document.getElementById('notesToggle');
@@ -1545,31 +1603,43 @@ function renderActiveWorkout(workout) {
   const notesTextarea = document.getElementById('notesTextarea');
   const notesIndicator = document.getElementById('notesIndicator');
 
-  // Auto-expand if notes exist
-  if (exercise.notes) {
-    notesBody.style.display = 'block';
-    notesToggle.classList.add('open');
+  if (notesToggle && notesBody && notesTextarea) {
+    const exercise = workout.exercises[exIdx];
+
+    // Auto-expand if notes exist
+    if (exercise.notes) {
+      notesBody.style.display = 'block';
+      notesToggle.classList.add('open');
+    }
+
+    notesToggle.addEventListener('click', () => {
+      const showing = notesBody.style.display === 'block';
+      notesBody.style.display = showing ? 'none' : 'block';
+      notesToggle.classList.toggle('open', !showing);
+      if (!showing) notesTextarea.focus();
+    });
+
+    notesTextarea.addEventListener('input', () => {
+      const w = Store.getActiveWorkout();
+      if (!w) return;
+      w.exercises[w.currentExerciseIdx].notes = notesTextarea.value;
+      Store.saveActiveWorkout(w);
+      notesIndicator.classList.toggle('has-notes', !!notesTextarea.value.trim());
+    });
   }
-
-  notesToggle.addEventListener('click', () => {
-    const showing = notesBody.style.display === 'block';
-    notesBody.style.display = showing ? 'none' : 'block';
-    notesToggle.classList.toggle('open', !showing);
-    if (!showing) notesTextarea.focus();
-  });
-
-  notesTextarea.addEventListener('input', () => {
-    const w = Store.getActiveWorkout();
-    if (!w) return;
-    w.exercises[w.currentExerciseIdx].notes = notesTextarea.value;
-    Store.saveActiveWorkout(w);
-    notesIndicator.classList.toggle('has-notes', !!notesTextarea.value.trim());
-  });
 
   // If rest timer was running (page didn't change), maintain it
   if (isRestTimerRunning()) {
     const container = document.getElementById('restTimerContainer');
     if (container) container.style.display = 'flex';
+  }
+
+  // Auto-scroll to active exercise card
+  const activeCard = document.getElementById('activeExerciseCard');
+  if (activeCard) {
+    setTimeout(() => {
+      activeCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   }
 }
 
@@ -2363,8 +2433,8 @@ function viewProgress(params) {
   const exercise = allExercises.find((e) => e.id === exerciseId);
   const workouts = Store.getWorkouts();
 
-  // Extract data points: for each workout that has this exercise, get the best set (highest weight)
-  const dataPoints = [];
+  // Extract ALL data points: for each workout that has this exercise, get the best set (highest weight)
+  const allDataPoints = [];
   workouts.forEach((w) => {
     const ex = w.exercises.find((e) => e.id === exerciseId);
     if (!ex || ex.sets.length === 0) return;
@@ -2379,7 +2449,7 @@ function viewProgress(params) {
 
     const totalVolume = ex.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
 
-    dataPoints.push({
+    allDataPoints.push({
       date: w.startedAt,
       weight: bestSet.weight,
       reps: bestSet.reps,
@@ -2389,9 +2459,15 @@ function viewProgress(params) {
     });
   });
 
+  // Filter data points by selected time range
+  const now = Date.now();
+  const dataPoints = _progressRange > 0
+    ? allDataPoints.filter((d) => now - d.date < _progressRange * 86400000)
+    : allDataPoints;
+
   const exerciseName = exercise ? exercise.name : 'Exercise';
 
-  // Calculate chart metrics
+  // Calculate chart metrics from filtered data
   const weights = dataPoints.map((d) => d.weight);
   const maxWeight = weights.length > 0 ? Math.max(...weights) : 0;
   const minWeight = weights.length > 0 ? Math.min(...weights) : 0;
@@ -2404,6 +2480,20 @@ function viewProgress(params) {
   const latestE1RM = e1rms.length > 0 ? e1rms[e1rms.length - 1] : 0;
   const firstE1RM = e1rms.length > 0 ? e1rms[0] : 0;
   const e1rmChange = latestE1RM - firstE1RM;
+
+  // Time range chip options
+  const ranges = [
+    { value: 14, label: '14D' },
+    { value: 30, label: '30D' },
+    { value: 90, label: '90D' },
+    { value: 0, label: 'All' },
+  ];
+  const rangeChipsHtml = ranges
+    .map(
+      (r) =>
+        `<button class="range-chip ${_progressRange === r.value ? 'active' : ''}" data-range="${r.value}">${r.label}</button>`,
+    )
+    .join('');
 
   render(`
     <header class="header">
@@ -2418,18 +2508,23 @@ function viewProgress(params) {
         <span class="progress-ex-icon">${muscleIcon(exercise ? exercise.muscle : 'default')}</span>
         <div>
           <h2 class="progress-ex-name">${esc(exerciseName)}</h2>
-          <span class="progress-ex-meta">${dataPoints.length} workout${
-    dataPoints.length !== 1 ? 's' : ''
+          <span class="progress-ex-meta">${allDataPoints.length} workout${
+    allDataPoints.length !== 1 ? 's' : ''
   } tracked</span>
         </div>
+      </div>
+
+      <!-- Time Range Filter -->
+      <div class="range-chips" id="rangeChips">
+        ${rangeChipsHtml}
       </div>
 
       ${
         dataPoints.length === 0
           ? `
         <div class="empty-state">
-          <p class="empty-title">No data yet</p>
-          <p class="empty-sub">Complete workouts with this exercise to see progress</p>
+          <p class="empty-title">No data in this period</p>
+          <p class="empty-sub">${allDataPoints.length > 0 ? 'Try a wider time range' : 'Complete workouts with this exercise to see progress'}</p>
         </div>
       `
           : `
@@ -2501,6 +2596,14 @@ function viewProgress(params) {
       }
     </main>
   `);
+
+  // Bind range chip click handlers
+  document.getElementById('rangeChips')?.addEventListener('click', (e) => {
+    const chip = e.target.closest('.range-chip');
+    if (!chip) return;
+    _progressRange = parseInt(chip.dataset.range, 10);
+    viewProgress(params);
+  });
 
   // Render SVG charts
   if (dataPoints.length > 0) {
@@ -2666,7 +2769,7 @@ function viewExerciseDetail(params) {
           usedInRoutines.length > 0
             ? `
           <div class="detail-section">
-            <h3 class="detail-section-title">Used in Routines</h3>
+            <h3 class="detail-section-title">Used in Workouts</h3>
             <div class="detail-routine-tags">
               ${usedInRoutines.map((r) => `<span class="tag">${esc(r.name)}</span>`).join('')}
             </div>
@@ -2706,7 +2809,7 @@ function viewExerciseDetail(params) {
     if (usedInRoutines.length > 0) {
       const names = usedInRoutines.map((r) => r.name).join(', ');
       if (
-        !confirm(`This exercise is used in: ${names}.\n\nDelete it and remove from those routines?`)
+        !confirm(`This exercise is used in: ${names}.\n\nDelete it and remove from those workouts?`)
       )
         return;
       // Remove from routines
@@ -2955,10 +3058,12 @@ function exportData() {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
-  const date = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const time = now.toTimeString().slice(0, 5).replace(':', '-');
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ironlog-backup-${date}.json`;
+  a.download = `arklog-backup-${date}_${time}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -3099,7 +3204,7 @@ function viewSettings() {
           </div>
           <div class="settings-stat-card">
             <span class="settings-stat-val">${routines.length}</span>
-            <span class="settings-stat-label">Routines</span>
+            <span class="settings-stat-label">Workouts</span>
           </div>
           <div class="settings-stat-card">
             <span class="settings-stat-val">${exercises.length}</span>
@@ -3150,14 +3255,14 @@ function viewSettings() {
           </span>
           <div class="settings-action-text">
             <span class="settings-action-name">Clear All Data</span>
-            <span class="settings-action-desc">Delete all workouts, routines & exercises</span>
+            <span class="settings-action-desc">Delete all data including workouts & exercises</span>
           </div>
         </button>
       </section>
 
       <!-- About -->
       <section class="settings-section settings-about">
-        <p class="settings-about-text">Iron Log v1.0</p>
+        <p class="settings-about-text">ArkLog v1.0</p>
         <p class="settings-about-sub">Data stored locally on this device</p>
       </section>
     </main>

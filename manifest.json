@@ -1,7 +1,7 @@
 {
-  "name": "Iron Log - Gym Tracker",
-  "short_name": "Iron Log",
-  "description": "Track your gym workouts, build routines, and monitor progress.",
+  "name": "ArkLog - Gym Tracker",
+  "short_name": "ArkLog",
+  "description": "Track your gym workouts and monitor progress.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#121212",

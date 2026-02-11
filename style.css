@@ -45,8 +45,8 @@ body {
     Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100%;
-  overflow-x: hidden;
+  height: 100%;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -54,8 +54,11 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
@@ -801,8 +804,72 @@ select.form-input {
   border-radius: var(--radius);
   border: 1px solid var(--border);
   padding: 20px 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.workout-exercise-card.active-card {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 4px 16px rgba(0, 122, 255, 0.08);
+}
+.workout-exercise-card.collapsed {
+  padding: 14px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.workout-exercise-card.collapsed:active {
+  background: var(--bg-elevated);
+  transform: scale(0.99);
+}
+.collapsed-header {
+  margin-bottom: 0 !important;
+}
+.collapsed-sets {
+  font-size: 0.72rem !important;
+  color: var(--text-dim) !important;
+  display: block;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.collapsed-check {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.collapsed-check svg {
+  width: 20px;
+  height: 20px;
+}
+.collapsed-chevron {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+}
+.collapsed-chevron svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Workout Exercises List ──────────────────────────────── */
+.workout-exercises-list {
   margin-bottom: 16px;
 }
+
+/* ── Workout Finish Section ──────────────────────────────── */
+.workout-finish-section {
+  margin-bottom: 24px;
+}
+
+/* ── Inline Notes (inside active card) ───────────────────── */
+.workout-notes-inline {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
 .workout-exercise-header {
   display: flex;
   align-items: center;
@@ -1563,6 +1630,35 @@ select.form-input {
   color: var(--text-muted);
 }
 
+/* ── Progress Range Chips ────────────────────────────────────── */
+.range-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.range-chip {
+  flex: 1;
+  padding: 8px 0;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.range-chip:active {
+  transform: scale(0.96);
+}
+.range-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #000;
+}
+
 /* ── Progress Stats Grid ──────────────────────────────────── */
 .progress-stats {
   display: grid;
@@ -2100,23 +2196,23 @@ select.form-input {
 
 /* ── Swap Button on Exercise Header ──────────────────────── */
 .btn-swap-exercise {
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: var(--bg-elevated);
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--primary);
+  background: var(--primary-dim);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--primary);
   cursor: pointer;
   flex-shrink: 0;
   transition: transform 0.15s, background 0.15s, color 0.15s;
 }
 .btn-swap-exercise:active {
   transform: scale(0.85);
-  background: var(--primary-dim);
-  color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
 .btn-swap-exercise svg {
   width: 18px;
@@ -2456,30 +2552,6 @@ select.form-input {
   color: var(--text);
 }
 
-/* ── Week stats line ───────────────────────────────────────── */
-.week-stats {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 10px;
-  font-size: 0.75rem;
-}
-.week-stat {
-  color: var(--text-dim);
-}
-.week-stat.completed {
-  color: var(--success);
-}
-.week-stat.scheduled {
-  color: var(--text-muted);
-}
-.week-stat.missed {
-  color: var(--danger);
-}
-.week-stat.rest {
-  color: var(--text-dim);
-}
-
 /* ── Week strip container ───────────────────────────────────── */
 .week-strip {
   display: flex;
@@ -2498,8 +2570,10 @@ select.form-input {
   align-items: center;
   gap: 6px;
   flex: 1;
-  cursor: default;
+  cursor: pointer;
+  padding: 6px 0;
   transition: transform 0.15s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Day circle ring */
@@ -2539,9 +2613,6 @@ select.form-input {
 .week-day.scheduled .week-day-label {
   color: var(--text-muted);
 }
-.week-day.scheduled {
-  cursor: pointer;
-}
 
 /* Completed day */
 .week-day.completed .week-day-ring {
@@ -2559,9 +2630,6 @@ select.form-input {
 }
 .week-day.missed .week-day-label {
   color: var(--danger);
-}
-.week-day.missed {
-  cursor: pointer;
 }
 
 /* Today highlight */
