@@ -874,7 +874,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       <button class="btn-back" onclick="Router.go('/')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <h1>${isEdit ? 'Edit Routine' : 'New Routine'}</h1>
+      <h1>${isEdit ? 'Edit Workout' : 'New Workout'}</h1>
       ${
         isEdit
           ? `<button class="btn-icon danger" id="deleteRoutineBtn" aria-label="Delete routine">
@@ -885,7 +885,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     </header>
     <main class="content" id="routineEditorMain">
       <div class="form">
-        <label class="form-label">Routine Name
+        <label class="form-label">Workout Name
           <input type="text" id="routineName" class="form-input" placeholder="e.g. Push Day" value="${esc(
             routineName,
           )}" autocomplete="off" />
@@ -1503,7 +1503,7 @@ function renderActiveWorkout(workout) {
 
       <!-- Finish Workout Button -->
       <div class="workout-finish-section">
-        <button class="btn-finish-workout" onclick="finishWorkout()">
+        <button class="btn-finish-workout-inline" onclick="finishWorkout()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           Finish Workout
         </button>
@@ -1976,13 +1976,41 @@ function finishWorkout() {
   // Check if any sets were logged
   const totalSets = w.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
   if (totalSets === 0) {
-    if (!confirm('No sets were logged. Discard this workout?')) return;
-    clearRestTimer();
-    Store.clearActiveWorkout();
-    Router.go('/');
+    showConfirmModal({
+      icon: 'warning',
+      title: 'No Sets Logged',
+      message: 'You haven\'t logged any sets. Discard this workout?',
+      confirmText: 'Discard',
+      confirmDanger: true,
+      onConfirm: () => {
+        clearRestTimer();
+        Store.clearActiveWorkout();
+        Router.go('/');
+      },
+    });
     return;
   }
 
+  // Check for skipped exercises
+  const skippedExercises = w.exercises.filter((ex) => ex.sets.length === 0);
+  if (skippedExercises.length > 0) {
+    const skippedNames = skippedExercises.map((ex) => ex.name);
+    showConfirmModal({
+      icon: 'incomplete',
+      title: 'Incomplete Workout',
+      message: `${skippedExercises.length} exercise${skippedExercises.length > 1 ? 's' : ''} skipped:`,
+      list: skippedNames,
+      confirmText: 'Finish Anyway',
+      confirmDanger: false,
+      onConfirm: () => doFinishWorkout(w),
+    });
+    return;
+  }
+
+  doFinishWorkout(w);
+}
+
+function doFinishWorkout(w) {
   clearRestTimer();
 
   const completedWorkout = {
@@ -2027,6 +2055,50 @@ function finishWorkout() {
   Router.go('/workout/summary', { workoutId: completedWorkout.id });
 }
 
+// ── Custom confirmation modal ─────────────────────────────────
+function showConfirmModal({ icon, title, message, list, confirmText, confirmDanger, onConfirm }) {
+  const iconSvg = icon === 'warning'
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+  const listHtml = list && list.length > 0
+    ? `<div class="confirm-modal-list">${list.map((name) => `<span class="confirm-modal-item">${esc(name)}</span>`).join('')}</div>`
+    : '';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-modal-overlay';
+  overlay.innerHTML = `
+    <div class="confirm-modal">
+      <div class="confirm-modal-icon ${icon}">${iconSvg}</div>
+      <h3 class="confirm-modal-title">${esc(title)}</h3>
+      <p class="confirm-modal-message">${esc(message)}</p>
+      ${listHtml}
+      <div class="confirm-modal-actions">
+        <button class="confirm-modal-btn cancel">Cancel</button>
+        <button class="confirm-modal-btn ${confirmDanger ? 'danger' : 'confirm'}">${esc(confirmText)}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  // Trigger animation
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+
+  const close = () => {
+    overlay.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 200);
+  };
+
+  overlay.querySelector('.confirm-modal-btn.cancel').addEventListener('click', close);
+  overlay.querySelector('.confirm-modal-btn:not(.cancel)').addEventListener('click', () => {
+    close();
+    onConfirm();
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+}
+
 // ══════════════════════════════════════════════════════════════
 // VIEW: Workout Summary (shown after finishing)
 // ══════════════════════════════════════════════════════════════
@@ -2045,6 +2117,16 @@ function viewWorkoutSummary(params) {
     0,
   );
   const exercisesPerformed = workout.exercises.filter((ex) => ex.sets.length > 0).length;
+
+  // Gather sparkline data for each exercise
+  const exerciseChartData = {};
+  workout.exercises.forEach((ex) => {
+    if (ex.sets.length === 0) return;
+    const history = getExerciseHistory(ex.id);
+    if (history.length >= 2) {
+      exerciseChartData[ex.id] = history;
+    }
+  });
 
   render(`
     <header class="header">
@@ -2093,10 +2175,27 @@ function viewWorkoutSummary(params) {
       <div class="summary-exercises">
         ${workout.exercises
           .filter((ex) => ex.sets.length > 0)
-          .map(
-            (ex) => `
+          .map((ex) => {
+            const history = exerciseChartData[ex.id];
+            const trendHtml = (() => {
+              if (!history || history.length < 2) return '';
+              const prev = history[history.length - 2];
+              const curr = history[history.length - 1];
+              const diff = curr.weight - prev.weight;
+              if (diff === 0) return '';
+              const cls = diff > 0 ? 'positive' : 'negative';
+              const arrow = diff > 0
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+              return `<span class="summary-trend ${cls}">${arrow}${Math.abs(diff)}kg</span>`;
+            })();
+
+            return `
           <div class="summary-exercise">
-            <h3 class="summary-ex-name">${esc(ex.name)}</h3>
+            <div class="summary-ex-header">
+              <h3 class="summary-ex-name">${esc(ex.name)}</h3>
+              ${trendHtml}
+            </div>
             <div class="summary-sets">
               ${ex.sets
                 .map(
@@ -2112,6 +2211,7 @@ function viewWorkoutSummary(params) {
                 )
                 .join('')}
             </div>
+            ${history ? `<div class="summary-sparkline" id="spark_${ex.id}"></div>` : ''}
             ${
               ex.notes
                 ? `<div class="summary-notes"><span class="summary-notes-label">Notes</span><p>${esc(
@@ -2120,14 +2220,26 @@ function viewWorkoutSummary(params) {
                 : ''
             }
           </div>
-        `,
-          )
+        `;
+          })
           .join('')}
       </div>
 
       <button class="btn-primary btn-full btn-save" onclick="Router.go('/')">Done</button>
     </main>
   `);
+
+  // Render sparklines after DOM is ready
+  workout.exercises.forEach((ex) => {
+    const history = exerciseChartData[ex.id];
+    if (history) {
+      const weights = history.map((d) => d.weight);
+      const lastWeight = weights[weights.length - 1];
+      const prevWeight = weights.length >= 2 ? weights[weights.length - 2] : lastWeight;
+      const color = lastWeight >= prevWeight ? 'var(--success)' : 'var(--danger)';
+      renderSparkline(`spark_${ex.id}`, weights, color);
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2724,6 +2836,71 @@ function renderLineChart(containerId, values, labels) {
   `;
 }
 
+// ── Sparkline SVG renderer (compact, no labels) ─────────────
+function renderSparkline(containerId, values, color) {
+  const container = document.getElementById(containerId);
+  if (!container || values.length < 2) return;
+
+  const width = container.clientWidth || 200;
+  const height = 48;
+  const pad = 4;
+  const chartW = width - pad * 2;
+  const chartH = height - pad * 2;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const adjMin = min - range * 0.1;
+  const adjMax = max + range * 0.1;
+  const adjRange = adjMax - adjMin;
+
+  const strokeColor = color || 'var(--primary)';
+
+  function x(i) { return pad + (i / (values.length - 1)) * chartW; }
+  function y(v) { return pad + chartH - ((v - adjMin) / adjRange) * chartH; }
+
+  const points = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const areaPoints = `${x(0).toFixed(1)},${(pad + chartH).toFixed(1)} ${points} ${x(values.length - 1).toFixed(1)},${(pad + chartH).toFixed(1)}`;
+  const lastDot = `<circle cx="${x(values.length - 1).toFixed(1)}" cy="${y(values[values.length - 1]).toFixed(1)}" r="3" fill="${strokeColor}"/>`;
+
+  container.innerHTML = `
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>
+        <linearGradient id="sg_${containerId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${areaPoints}" fill="url(#sg_${containerId})"/>
+      <polyline points="${points}" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${lastDot}
+    </svg>
+  `;
+}
+
+// ── Get exercise history data points for sparklines ─────────
+function getExerciseHistory(exerciseId) {
+  const workouts = Store.getWorkouts();
+  const dataPoints = [];
+  workouts.forEach((w) => {
+    const ex = w.exercises.find((e) => e.id === exerciseId);
+    if (!ex || ex.sets.length === 0) return;
+    const bestSet = ex.sets.reduce((best, s) => {
+      if (!best) return s;
+      if (s.weight > best.weight) return s;
+      if (s.weight === best.weight && s.reps > best.reps) return s;
+      return best;
+    }, null);
+    dataPoints.push({
+      date: w.startedAt,
+      weight: bestSet.weight,
+      reps: bestSet.reps,
+      e1rm: bestSet.weight * (1 + bestSet.reps / 30),
+    });
+  });
+  return dataPoints;
+}
+
 // ══════════════════════════════════════════════════════════════
 // VIEW: Exercise Detail
 // ══════════════════════════════════════════════════════════════
@@ -3293,3 +3470,14 @@ Router.on('/settings', viewSettings);
 
 // ── Boot ─────────────────────────────────────────────────────
 Router.start();
+
+// ── iOS viewport stabilization ──────────────────────────────
+// On iOS Safari/PWA, the visual viewport can shift on initial load
+// causing fixed-position elements (tab bar) to appear offset.
+// Force a scroll reset and resize event to stabilize.
+if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+  window.scrollTo(0, 0);
+  setTimeout(() => { window.scrollTo(0, 0); }, 50);
+  setTimeout(() => { window.scrollTo(0, 0); }, 150);
+  window.addEventListener('resize', () => { window.scrollTo(0, 1); window.scrollTo(0, 0); }, { once: true });
+}

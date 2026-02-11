@@ -45,8 +45,8 @@ body {
     Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -54,11 +54,8 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
@@ -861,6 +858,35 @@ select.form-input {
 /* ── Workout Finish Section ──────────────────────────────── */
 .workout-finish-section {
   margin-bottom: 24px;
+  padding-top: 8px;
+}
+.btn-finish-workout-inline {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-finish-workout-inline svg {
+  width: 18px;
+  height: 18px;
+  color: var(--success);
+}
+.btn-finish-workout-inline:active {
+  background: var(--bg-elevated);
+  border-color: var(--success);
+  color: var(--text);
+  transform: scale(0.98);
 }
 
 /* ── Inline Notes (inside active card) ───────────────────── */
@@ -1579,6 +1605,40 @@ select.form-input {
 }
 .summary-ex-header .summary-ex-name {
   margin-bottom: 0;
+}
+.summary-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.summary-trend svg {
+  width: 12px;
+  height: 12px;
+}
+.summary-trend.positive {
+  background: rgba(48, 209, 88, 0.12);
+  color: var(--success);
+}
+.summary-trend.negative {
+  background: rgba(255, 69, 58, 0.12);
+  color: var(--danger);
+}
+.summary-sparkline {
+  margin-top: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  height: 48px;
+}
+.summary-sparkline svg {
+  display: block;
+  width: 100%;
+  height: 48px;
 }
 .btn-progress-link {
   width: 32px;
@@ -2464,6 +2524,116 @@ select.form-input {
   font-size: 0.75rem;
   color: var(--text-dim);
   margin-top: 4px;
+}
+
+/* ── Confirmation Modal ──────────────────────────────────── */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 24px;
+  transition: background 0.2s ease;
+}
+.confirm-modal-overlay.visible {
+  background: rgba(0, 0, 0, 0.6);
+}
+.confirm-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px 20px;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+.confirm-modal-overlay.visible .confirm-modal {
+  transform: scale(1);
+  opacity: 1;
+}
+.confirm-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.confirm-modal-icon svg {
+  width: 26px;
+  height: 26px;
+}
+.confirm-modal-icon.warning {
+  background: rgba(255, 69, 58, 0.12);
+  color: var(--danger);
+}
+.confirm-modal-icon.incomplete {
+  background: rgba(255, 214, 10, 0.12);
+  color: var(--warning);
+}
+.confirm-modal-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.confirm-modal-message {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+.confirm-modal-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.confirm-modal-item {
+  background: var(--bg-elevated);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.confirm-modal-actions {
+  display: flex;
+  gap: 10px;
+}
+.confirm-modal-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s, opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.confirm-modal-btn:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+.confirm-modal-btn.cancel {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+.confirm-modal-btn.confirm {
+  background: var(--primary);
+  color: #fff;
+}
+.confirm-modal-btn.danger {
+  background: var(--danger);
+  color: #fff;
 }
 
 /* ── Toast Notifications ──────────────────────────────────── */
