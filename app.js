@@ -720,10 +720,9 @@ function viewRoutines() {
 
   render(`
     <header class="header">
+      <div class="header-spacer"></div>
       <h1>Workouts</h1>
-      <button class="btn-icon" onclick="Router.go('/routine/new')" aria-label="New workout">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
+      <div class="header-spacer"></div>
     </header>
     <main class="content has-tabs">
       ${
@@ -743,6 +742,12 @@ function viewRoutines() {
           : ''
       }
       ${renderWeekStrip(_weekOffset)}
+
+      <button class="btn-new-routine" onclick="Router.go('/routine/new')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>New Workout</span>
+      </button>
+
       ${
         routines.length === 0
           ? `
@@ -751,10 +756,11 @@ function viewRoutines() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
           </div>
           <p class="empty-title">No workouts yet</p>
-          <p class="empty-sub">Tap + to create your first workout</p>
+          <p class="empty-sub">Create your first workout to start tracking</p>
         </div>
       `
           : `
+        <h2 class="section-title home-section-title">My Workouts</h2>
         <ul class="routine-list">
           ${routines
             .map(
@@ -808,7 +814,7 @@ function viewExercises() {
     <main class="content has-tabs">
       <div class="search-bar">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="searchInput" placeholder="Search exercises…" autocomplete="off" />
+        <input type="text" id="searchInput" placeholder="Search exercises…" autocomplete="off" enterkeyhint="search" />
       </div>
       <div class="filter-row" id="filterRow">
         ${muscles
@@ -847,6 +853,22 @@ function viewExercises() {
   }
 
   searchInput.addEventListener('input', applyFilters);
+
+  // Scroll to top when search is focused to prevent layout jumps
+  searchInput.addEventListener('focus', () => {
+    setTimeout(() => {
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
+  });
+
+  // Dismiss keyboard on Enter/Search key
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchInput.blur();
+    }
+  });
+
   filterRow.addEventListener('click', (e) => {
     const chip = e.target.closest('.filter-chip');
     if (!chip) return;
@@ -952,7 +974,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       <h1>${isEdit ? 'Edit Workout' : 'New Workout'}</h1>
       ${
         isEdit
-          ? `<button class="btn-icon danger" id="deleteRoutineBtn" aria-label="Delete routine">
+           ? `<button class="btn-icon danger" id="deleteRoutineBtn" aria-label="Delete workout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
       </button>`
           : '<div class="header-spacer"></div>'
@@ -1001,7 +1023,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
         <h2 class="section-title">Add Exercises</h2>
         <div class="search-bar">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="routineSearch" placeholder="Search exercises…" autocomplete="off" />
+          <input type="text" id="routineSearch" placeholder="Search exercises…" autocomplete="off" enterkeyhint="search" />
         </div>
         <ul class="exercise-list" id="availableList">
           ${renderAvailableExercises(allExercises, selected)}
@@ -1011,7 +1033,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     </main>
     <div class="sticky-save-bar">
       <button class="btn-primary btn-full" id="saveRoutineBtn">${
-        isEdit ? 'Save Changes' : 'Create Routine'
+        isEdit ? 'Save Changes' : 'Create Workout'
       }</button>
     </div>
   `);
@@ -1029,7 +1051,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     if (!name) {
       const nameInput = document.getElementById('routineName');
       shakeElement(nameInput);
-      showFormError(nameInput.closest('label'), 'Please enter a routine name');
+      showFormError(nameInput.closest('label'), 'Please enter a workout name');
       nameInput.addEventListener('input', () => {
         const err = document.querySelector('.form-error');
         if (err) err.remove();
@@ -1060,7 +1082,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   // ── Delete routine (re-bound every render) ───────────────
   if (isEdit) {
     document.getElementById('deleteRoutineBtn').addEventListener('click', () => {
-      if (confirm('Delete this routine?')) {
+      if (confirm('Delete this workout?')) {
         const routines = Store.getRoutines().filter((r) => r.id !== routineId);
         Store.saveRoutines(routines);
         Router.go('/');
@@ -1089,7 +1111,8 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   });
 
   // ── Search ───────────────────────────────────────────────
-  document.getElementById('routineSearch').addEventListener('input', (e) => {
+  const routineSearchInput = document.getElementById('routineSearch');
+  routineSearchInput.addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase().trim();
     let filtered = allExercises;
     if (q)
@@ -1111,6 +1134,21 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
         }
       });
     });
+  });
+
+  // Scroll to search on focus to prevent layout jumps
+  routineSearchInput.addEventListener('focus', () => {
+    setTimeout(() => {
+      routineSearchInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);
+  });
+
+  // Dismiss keyboard on Enter/Search key
+  routineSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      routineSearchInput.blur();
+    }
   });
 
   // ── Drag-and-drop reorder ────────────────────────────────
@@ -1431,10 +1469,10 @@ function renderActiveWorkout(workout) {
               <div class="last-perf-sets">
                 ${lastPerf
                   .map(
-                    (s, i) =>
-                      `<span class="last-perf-set">${s.weight}${s.weight ? 'kg' : ''} × ${
-                        s.reps
-                      }</span>`,
+                    (s, i) => {
+                      const diffColor = s.difficulty === 'easy' ? 'var(--success)' : s.difficulty === 'hard' ? 'var(--danger)' : 'var(--warning)';
+                      return `<span class="last-perf-set"><span class="last-perf-diff" style="background:${diffColor}"></span>${s.weight}${s.weight ? 'kg' : ''} × ${s.reps}</span>`;
+                    },
                   )
                   .join('')}
               </div>
@@ -1474,8 +1512,8 @@ function renderActiveWorkout(workout) {
             </div>
 
             <!-- New Set Input Row -->
-            <div class="set-input-row" id="setInputRow">
-              <span class="set-col-num set-number">${exercise.sets.length + 1}</span>
+            <div class="set-input-row set-next-up" id="setInputRow">
+              <span class="set-col-num set-number set-number-next">${exercise.sets.length + 1}</span>
               <div class="set-col-weight">
                 <input type="number" id="inputWeight" class="set-input" placeholder="0"
                        inputmode="decimal" step="0.5" min="0"
@@ -1505,6 +1543,19 @@ function renderActiveWorkout(workout) {
                 </button>
               </div>
             </div>
+
+            <!-- Planned upcoming sets from last performance -->
+            ${lastPerf ? (() => {
+              const doneCount = exercise.sets.length;
+              // Planned rows start after the "next up" input row (which is set doneCount+1)
+              // So planned rows are for set indices doneCount+1, doneCount+2, ... up to lastPerf.length-1
+              const plannedRows = [];
+              for (let pi = doneCount + 1; pi < lastPerf.length; pi++) {
+                const ps = lastPerf[pi];
+                plannedRows.push(renderPlannedSetRow(ps, pi));
+              }
+              return plannedRows.join('');
+            })() : ''}
           </div>
 
           <!-- Rest Timer -->
@@ -1610,6 +1661,12 @@ function renderActiveWorkout(workout) {
     });
   });
 
+  // Auto-select weight/reps input values on focus
+  const inputWeight = document.getElementById('inputWeight');
+  const inputReps = document.getElementById('inputReps');
+  if (inputWeight) inputWeight.addEventListener('focus', () => inputWeight.select());
+  if (inputReps) inputReps.addEventListener('focus', () => inputReps.select());
+
   // Difficulty selector
   let selectedDifficulty = 'medium';
   const diffSelector = document.getElementById('difficultySelector');
@@ -1626,7 +1683,15 @@ function renderActiveWorkout(workout) {
   // Log set
   const btnLogSet = document.getElementById('btnLogSet');
   if (btnLogSet) {
+    // Disable log button while rest timer is running
+    if (isRestTimerRunning()) {
+      btnLogSet.disabled = true;
+      btnLogSet.classList.add('btn-log-disabled');
+    }
+
     btnLogSet.addEventListener('click', () => {
+      if (btnLogSet.disabled) return;
+
       const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
       const reps = parseInt(document.getElementById('inputReps').value) || 0;
 
@@ -1654,12 +1719,77 @@ function renderActiveWorkout(workout) {
 
   // Delete set buttons
   document.querySelectorAll('.btn-delete-set').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Don't trigger edit mode
       const setIdx = parseInt(btn.dataset.setidx);
       const w = Store.getActiveWorkout();
       w.exercises[w.currentExerciseIdx].sets.splice(setIdx, 1);
       Store.saveActiveWorkout(w);
       renderActiveWorkout(w);
+    });
+  });
+
+  // Tap completed set row to enter edit mode
+  document.querySelectorAll('.set-row.completed').forEach((row) => {
+    row.addEventListener('click', () => {
+      // If another row is already being edited, cancel it first
+      const existingEdit = document.querySelector('.set-row.editing');
+      if (existingEdit) {
+        const w = Store.getActiveWorkout();
+        renderActiveWorkout(w);
+        return;
+      }
+
+      const setIdx = parseInt(row.dataset.setidx);
+      const w = Store.getActiveWorkout();
+      const set = w.exercises[w.currentExerciseIdx].sets[setIdx];
+      if (!set) return;
+
+      row.outerHTML = renderEditSetRow(set, setIdx);
+
+      // Wire up the edit row event handlers
+      const editRow = document.querySelector('.set-row.editing');
+      if (!editRow) return;
+
+      // Auto-select input values on focus
+      editRow.querySelectorAll('.set-input').forEach((inp) => {
+        inp.addEventListener('focus', () => inp.select());
+      });
+
+      // Focus the weight input
+      const weightInput = editRow.querySelector('.edit-set-weight');
+      if (weightInput) weightInput.focus();
+
+      // Difficulty toggle within edit row
+      editRow.querySelectorAll('.edit-diff-selector .diff-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          editRow.querySelectorAll('.edit-diff-selector .diff-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+
+      // Save button
+      const saveBtn = editRow.querySelector('.btn-save-edit-set');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const newWeight = parseFloat(editRow.querySelector('.edit-set-weight').value) || 0;
+          const newReps = parseInt(editRow.querySelector('.edit-set-reps').value) || 0;
+          const activeDiffBtn = editRow.querySelector('.edit-diff-selector .diff-btn.active');
+          const newDiff = activeDiffBtn ? activeDiffBtn.dataset.diff : 'medium';
+
+          const w2 = Store.getActiveWorkout();
+          const s = w2.exercises[w2.currentExerciseIdx].sets[setIdx];
+          if (s) {
+            s.weight = newWeight;
+            s.reps = newReps;
+            s.difficulty = newDiff;
+            Store.saveActiveWorkout(w2);
+          }
+          renderActiveWorkout(w2);
+        });
+      }
     });
   });
 
@@ -1707,6 +1837,15 @@ function renderActiveWorkout(workout) {
   if (isRestTimerRunning()) {
     const container = document.getElementById('restTimerContainer');
     if (container) container.style.display = 'flex';
+    // Update display immediately so it doesn't flash stale values
+    const textEl = document.getElementById('restTimerText');
+    const circle = document.getElementById('restTimerCircle');
+    if (textEl) textEl.textContent = formatTimer(_restRemaining);
+    if (circle) {
+      const circumference = 2 * Math.PI * 52;
+      const progress = _restRemaining / _restTotal;
+      circle.setAttribute('stroke-dashoffset', circumference * (1 - progress));
+    }
   }
 
   // Auto-scroll to active exercise card
@@ -1719,24 +1858,69 @@ function renderActiveWorkout(workout) {
 }
 
 // ── Render a logged set row ──────────────────────────────────
-function renderSetRow(set, index, completed) {
-  const diffIcon = {
-    easy: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-    medium: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-    hard: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-  };
+const DIFF_ICON = {
+  easy: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+  medium: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+  hard: `<svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+};
 
+function renderSetRow(set, index, completed) {
   return `
-    <div class="set-row completed">
+    <div class="set-row completed" data-setidx="${index}">
       <span class="set-col-num set-number">${index + 1}</span>
-      <span class="set-col-weight set-value">${set.weight}</span>
-      <span class="set-col-reps set-value">${set.reps}</span>
-      <span class="set-col-diff set-diff-icon">${diffIcon[set.difficulty] || diffIcon.medium}</span>
+      <span class="set-col-weight set-value" data-field="weight">${set.weight}</span>
+      <span class="set-col-reps set-value" data-field="reps">${set.reps}</span>
+      <span class="set-col-diff set-diff-icon">${DIFF_ICON[set.difficulty] || DIFF_ICON.medium}</span>
       <span class="set-col-action">
         <button class="btn-delete-set" data-setidx="${index}" aria-label="Delete set">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </span>
+    </div>
+  `;
+}
+
+function renderEditSetRow(set, index) {
+  return `
+    <div class="set-row editing" data-setidx="${index}">
+      <span class="set-col-num set-number">${index + 1}</span>
+      <div class="set-col-weight">
+        <input type="number" class="set-input edit-set-weight" value="${set.weight}" inputmode="decimal" step="0.5" min="0" />
+      </div>
+      <div class="set-col-reps">
+        <input type="number" class="set-input edit-set-reps" value="${set.reps}" inputmode="numeric" step="1" min="0" />
+      </div>
+      <div class="set-col-diff">
+        <div class="difficulty-selector edit-diff-selector">
+          <button class="diff-btn${set.difficulty === 'easy' ? ' active' : ''}" data-diff="easy" title="Easy">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+          <button class="diff-btn${set.difficulty === 'medium' || !set.difficulty ? ' active' : ''}" data-diff="medium" title="Medium">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+          <button class="diff-btn${set.difficulty === 'hard' ? ' active' : ''}" data-diff="hard" title="Hard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="set-col-action">
+        <button class="btn-save-edit-set" data-setidx="${index}" aria-label="Save edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ── Render a planned (upcoming ghost) set row from last performance ──
+function renderPlannedSetRow(lastSet, index) {
+  return `
+    <div class="set-row planned">
+      <span class="set-col-num set-number">${index + 1}</span>
+      <span class="set-col-weight set-value">${lastSet.weight}</span>
+      <span class="set-col-reps set-value">${lastSet.reps}</span>
+      <span class="set-col-diff set-diff-icon">${DIFF_ICON[lastSet.difficulty] || DIFF_ICON.medium}</span>
+      <span class="set-col-action"></span>
     </div>
   `;
 }
@@ -1890,8 +2074,6 @@ function getRestDuration(difficulty) {
 // ── Show rest timer after logging a set ──────────────────────
 function showRestTimer(seconds, workout) {
   const container = document.getElementById('restTimerContainer');
-  const circle = document.getElementById('restTimerCircle');
-  const textEl = document.getElementById('restTimerText');
 
   if (!container) return;
 
@@ -1901,16 +2083,17 @@ function showRestTimer(seconds, workout) {
   startRestTimer(
     seconds,
     (remaining, total) => {
-      if (!textEl.isConnected) {
-        clearRestTimer();
-        return;
-      }
+      // Re-query DOM elements each tick so we survive re-renders
+      const textEl = document.getElementById('restTimerText');
+      const circle = document.getElementById('restTimerCircle');
+      if (!textEl || !circle) return; // DOM not ready yet, skip this tick
       textEl.textContent = formatTimer(remaining);
       const progress = remaining / total;
       circle.setAttribute('stroke-dashoffset', circumference * (1 - progress));
     },
     () => {
-      container.style.display = 'none';
+      const c = document.getElementById('restTimerContainer');
+      if (c) c.style.display = 'none';
       // Vibrate on timer end if supported
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       // Re-render to update set number
@@ -2532,6 +2715,15 @@ function viewWorkoutDetail(params) {
         })} · ${formatTime(workout.startedAt)}</span>
       </div>
 
+      <div class="workout-note-section">
+        <div class="workout-note-header" id="workoutNoteToggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>Note</span>
+          <span class="workout-note-indicator${workout.note ? ' has-notes' : ''}" id="workoutNoteIndicator"></span>
+        </div>
+        <textarea class="workout-note-textarea" id="workoutNoteTextarea" placeholder="Add a note about this workout…" rows="3">${esc(workout.note || '')}</textarea>
+      </div>
+
       <div class="summary-stats">
         <div class="summary-stat">
           <span class="summary-stat-val">${formatDuration(workout.duration)}</span>
@@ -2609,6 +2801,35 @@ function viewWorkoutDetail(params) {
       Router.go('/history');
     }
   });
+
+  // Workout-level note auto-save
+  const workoutNoteTextarea = document.getElementById('workoutNoteTextarea');
+  const workoutNoteToggle = document.getElementById('workoutNoteToggle');
+  const workoutNoteIndicator = document.getElementById('workoutNoteIndicator');
+
+  if (workoutNoteToggle && workoutNoteTextarea) {
+    // Auto-expand if note exists
+    if (workout.note) {
+      workoutNoteTextarea.style.display = 'block';
+      workoutNoteToggle.classList.add('open');
+    }
+
+    workoutNoteToggle.addEventListener('click', () => {
+      const showing = workoutNoteTextarea.style.display === 'block';
+      workoutNoteTextarea.style.display = showing ? 'none' : 'block';
+      workoutNoteToggle.classList.toggle('open', !showing);
+      if (!showing) workoutNoteTextarea.focus();
+    });
+
+    workoutNoteTextarea.addEventListener('input', () => {
+      const workouts = Store.getWorkouts();
+      const w = workouts.find((w) => w.id === params.workoutId);
+      if (!w) return;
+      w.note = workoutNoteTextarea.value;
+      Store.saveWorkouts(workouts);
+      workoutNoteIndicator.classList.toggle('has-notes', !!workoutNoteTextarea.value.trim());
+    });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3349,7 +3570,7 @@ function importData() {
         }
 
         // Count what's being imported
-        const counts = `${data.exercises.length} exercises, ${data.routines.length} routines, ${data.workouts.length} workouts`;
+        const counts = `${data.exercises.length} exercises, ${data.routines.length} workouts, ${data.workouts.length} logs`;
 
         if (!confirm(`Import this backup?\n\n${counts}\n\nThis will REPLACE all your current data. Make sure you've exported a backup first.`)) {
           return;
@@ -3378,7 +3599,7 @@ function clearAllData() {
   const workoutCount = Store.getWorkouts().length;
   const routineCount = Store.getRoutines().length;
 
-  if (!confirm(`Delete ALL data?\n\n${routineCount} routines, ${workoutCount} workouts\n\nThis cannot be undone!`)) {
+  if (!confirm(`Delete ALL data?\n\n${routineCount} workouts, ${workoutCount} logs\n\nThis cannot be undone!`)) {
     return;
   }
   if (!confirm('Are you absolutely sure? All workout history will be permanently deleted.')) {
@@ -3452,7 +3673,7 @@ function viewSettings() {
         <div class="settings-stats">
           <div class="settings-stat-card">
             <span class="settings-stat-val">${workouts.length}</span>
-            <span class="settings-stat-label">Workouts</span>
+            <span class="settings-stat-label">Logs</span>
           </div>
           <div class="settings-stat-card">
             <span class="settings-stat-val">${routines.length}</span>
