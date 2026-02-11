@@ -465,8 +465,10 @@ function tabBar(active) {
 // ══════════════════════════════════════════════════════════════
 
 // Schedule data model:
-// Store.getSchedule() → { days: { 'YYYY-MM-DD': true, ... } }
-// Each date key means "workout scheduled on this day".
+// Store.getSchedule() → { days: { 'YYYY-MM-DD': true | { routineId } }, recurring: [{ dayOfWeek: 0-6, routineId }] }
+// days[dateStr] === true → simple planned day (no specific workout)
+// days[dateStr] === { routineId: '...' } → planned with a specific workout
+// recurring[].dayOfWeek → 0 = Monday … 6 = Sunday (ISO week)
 // Completed workouts are detected from Store.getWorkouts() via finishedAt timestamp.
 
 // Get YYYY-MM-DD for a date (local timezone, no UTC drift)
@@ -476,6 +478,12 @@ function toDateStr(date) {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// Get ISO day-of-week index for a date (0=Mon, 1=Tue, …, 6=Sun)
+function isoDayOfWeek(date) {
+  const d = new Date(date).getDay(); // 0=Sun
+  return d === 0 ? 6 : d - 1;
 }
 
 // Get 7 dates for a week at a given offset from current week (0 = this week)
@@ -507,18 +515,40 @@ function formatWeekLabel(weekOffset) {
   return `${fmt(mon)} – ${fmt(sun)}`;
 }
 
+// Resolve schedule entry for a date, merging recurring rules
+function resolveScheduleEntry(dateStr, date, schedule) {
+  const days = schedule.days || {};
+  const recurring = schedule.recurring || [];
+
+  // Explicit day entry takes priority
+  if (dateStr in days) {
+    const val = days[dateStr];
+    if (val === false) return null; // explicitly cancelled recurring
+    return val;
+  }
+
+  // Check recurring rules
+  const dow = isoDayOfWeek(date);
+  const rule = recurring.find((r) => r.dayOfWeek === dow);
+  if (rule) {
+    return rule.routineId ? { routineId: rule.routineId } : true;
+  }
+  return null;
+}
+
 // For a given week offset, compute each day's status
 function getWeekScheduleStatus(weekOffset) {
   const schedule = Store.getSchedule();
-  const scheduledDays = schedule.days || {};
   const weekDates = getWeekDates(weekOffset);
   const workouts = Store.getWorkouts();
   const today = toDateStr(new Date());
+  const routines = Store.getRoutines();
 
   return weekDates.map((date) => {
     const dateStr = toDateStr(date);
     const completed = workouts.some((w) => toDateStr(w.finishedAt) === dateStr);
-    const scheduled = scheduledDays[dateStr] === true;
+    const entry = resolveScheduleEntry(dateStr, date, schedule);
+    const scheduled = entry != null;
 
     let status;
     if (completed) {
@@ -531,11 +561,32 @@ function getWeekScheduleStatus(weekOffset) {
       status = 'rest';
     }
 
-    return { date, dateStr, status, isToday: dateStr === today };
+    // Resolve routine name for display
+    let routineName = null;
+    let routineId = null;
+    if (entry && typeof entry === 'object' && entry.routineId) {
+      routineId = entry.routineId;
+      const r = routines.find((rt) => rt.id === entry.routineId);
+      routineName = r ? r.name : null;
+    }
+
+    return { date, dateStr, status, isToday: dateStr === today, routineName, routineId };
   });
 }
 
-// Toggle a day's scheduled status
+// Set a schedule day entry
+function setScheduleDay(dateStr, value) {
+  const schedule = Store.getSchedule();
+  if (!schedule.days) schedule.days = {};
+  if (value == null) {
+    delete schedule.days[dateStr];
+  } else {
+    schedule.days[dateStr] = value;
+  }
+  Store.saveSchedule(schedule);
+}
+
+// Toggle a day's scheduled status (simple plan only, backward compatible)
 function toggleScheduleDay(dateStr) {
   const schedule = Store.getSchedule();
   if (!schedule.days) schedule.days = {};
@@ -547,13 +598,245 @@ function toggleScheduleDay(dateStr) {
   Store.saveSchedule(schedule);
 }
 
-// Move a scheduled workout from one date to another
+// Move a scheduled workout from one date to another (preserving entry data)
 function rescheduleDay(fromDate, toDate) {
   const schedule = Store.getSchedule();
   if (!schedule.days) schedule.days = {};
+  const entry = schedule.days[fromDate] || true;
   delete schedule.days[fromDate];
-  schedule.days[toDate] = true;
+  schedule.days[toDate] = entry;
   Store.saveSchedule(schedule);
+}
+
+// Add a recurring rule
+function addRecurringRule(dayOfWeek, routineId) {
+  const schedule = Store.getSchedule();
+  if (!schedule.recurring) schedule.recurring = [];
+  // Remove existing rule for same day
+  schedule.recurring = schedule.recurring.filter((r) => r.dayOfWeek !== dayOfWeek);
+  schedule.recurring.push({ dayOfWeek, routineId: routineId || null });
+  Store.saveSchedule(schedule);
+}
+
+// Remove a recurring rule for a specific day
+function removeRecurringRule(dayOfWeek) {
+  const schedule = Store.getSchedule();
+  if (!schedule.recurring) return;
+  schedule.recurring = schedule.recurring.filter((r) => r.dayOfWeek !== dayOfWeek);
+  Store.saveSchedule(schedule);
+}
+
+// Check if a recurring rule exists for a day of week
+function getRecurringRule(dayOfWeek) {
+  const schedule = Store.getSchedule();
+  return (schedule.recurring || []).find((r) => r.dayOfWeek === dayOfWeek) || null;
+}
+
+// ── Day Action Sheet (slide-up) ──────────────────────────────
+function showDayActionSheet(dateStr, date) {
+  const schedule = Store.getSchedule();
+  const days = schedule.days || {};
+  const entry = days[dateStr];
+  const hasExplicitEntry = dateStr in days;
+  const recurring = schedule.recurring || [];
+  const dow = isoDayOfWeek(date);
+  const recurringRule = recurring.find((r) => r.dayOfWeek === dow);
+  const isFromRecurring = !hasExplicitEntry && recurringRule;
+
+  // Resolve effective entry: explicit entry (incl. false = cancelled) > recurring > null
+  let effectiveEntry;
+  if (hasExplicitEntry) {
+    effectiveEntry = entry === false ? null : entry; // false = cancelled recurring
+  } else if (recurringRule) {
+    effectiveEntry = recurringRule.routineId ? { routineId: recurringRule.routineId } : true;
+  } else {
+    effectiveEntry = null;
+  }
+  const isScheduled = effectiveEntry != null && effectiveEntry !== false;
+
+  const routines = Store.getRoutines();
+  const dayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const dayLabel = dayLabels[dow];
+
+  // Determine current routine assignment
+  let currentRoutineId = null;
+  if (effectiveEntry && typeof effectiveEntry === 'object' && effectiveEntry.routineId) {
+    currentRoutineId = effectiveEntry.routineId;
+  }
+  const currentRoutine = currentRoutineId ? routines.find((r) => r.id === currentRoutineId) : null;
+
+  // Remove any existing sheet
+  const existing = document.querySelector('.day-action-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'day-action-overlay';
+
+  const fmtDate = (() => {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const d = new Date(dateStr + 'T12:00:00');
+    return `${dayLabel}, ${months[d.getMonth()]} ${d.getDate()}`;
+  })();
+
+  // Recurring toggle SVG (reused)
+  const recurringIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
+  const chevronIcon = `<svg class="day-action-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+  const dumbbellIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11"/><rect x="5" y="8" width="3" height="8" rx="1"/><rect x="16" y="8" width="3" height="8" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+
+  // Build routine picker HTML (shared between scheduled & unscheduled views)
+  const pickerHtml = routines.length > 0 ? `
+    <div class="day-action-picker" id="dayActionPicker" style="display:none">
+      <span class="day-action-picker-title">Select Workout</span>
+      <ul class="day-action-routine-list">
+        ${routines.map((r) => `
+          <li class="day-action-routine-item ${r.id === currentRoutineId ? 'active' : ''}" data-routine-id="${r.id}">
+            <span class="day-action-routine-name">${esc(r.name)}</span>
+            <span class="day-action-routine-meta">${r.exercises.length} exercise${r.exercises.length !== 1 ? 's' : ''}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  ` : '';
+
+  overlay.innerHTML = `
+    <div class="day-action-backdrop"></div>
+    <div class="day-action-panel">
+      <div class="day-action-handle"></div>
+      <div class="day-action-header">
+        <span class="day-action-date">${fmtDate}</span>
+        ${isFromRecurring ? '<span class="day-action-recurring-badge">Recurring</span>' : ''}
+      </div>
+
+      ${!isScheduled ? `
+        <div class="day-action-section" id="dayActionMain">
+          <button class="day-action-btn" data-action="plan-simple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <span>Plan Gym Day</span>
+          </button>
+          ${routines.length > 0 ? `
+            <button class="day-action-btn" data-action="show-picker">
+              ${dumbbellIcon}
+              <span>Plan with Workout</span>
+              ${chevronIcon}
+            </button>
+          ` : ''}
+        </div>
+      ` : `
+        <div class="day-action-section" id="dayActionMain">
+          ${currentRoutine ? `
+            <div class="day-action-current">
+              <span class="day-action-current-label">Assigned Workout</span>
+              <span class="day-action-current-name">${esc(currentRoutine.name)}</span>
+            </div>
+            <button class="day-action-btn primary" data-action="start-workout" data-routine-id="${currentRoutineId}">
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21"/></svg>
+              <span>Start Workout</span>
+            </button>
+          ` : `
+            <div class="day-action-current">
+              <span class="day-action-current-label">Planned</span>
+              <span class="day-action-current-name">Gym Day (no workout assigned)</span>
+            </div>
+          `}
+          ${routines.length > 0 ? `
+            <button class="day-action-btn" data-action="show-picker">
+              ${dumbbellIcon}
+              <span>${currentRoutine ? 'Change Workout' : 'Assign Workout'}</span>
+              ${chevronIcon}
+            </button>
+          ` : ''}
+          <button class="day-action-btn" data-action="toggle-recurring">
+            ${recurringIcon}
+            <span>${recurringRule ? `Remove Recurring ${dayLabel}` : `Repeat Every ${dayLabel}`}</span>
+          </button>
+          <button class="day-action-btn danger" data-action="remove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>Remove${isFromRecurring ? ' (this day only)' : ''}</span>
+          </button>
+        </div>
+      `}
+
+      ${pickerHtml}
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('open'));
+
+  // Close helper
+  const close = () => {
+    overlay.classList.remove('open');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 400);
+  };
+
+  overlay.querySelector('.day-action-backdrop').addEventListener('click', close);
+
+  // Swipe-down to dismiss
+  let startY = 0;
+  const panel = overlay.querySelector('.day-action-panel');
+  panel.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+  panel.addEventListener('touchend', (e) => { if (e.changedTouches[0].clientY - startY > 80) close(); }, { passive: true });
+
+  // Action buttons
+  overlay.querySelectorAll('[data-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+
+      if (action === 'plan-simple') {
+        setScheduleDay(dateStr, true);
+        rerenderWeekStrip();
+        // Re-open sheet to show management options (recurring, assign workout, etc.)
+        close();
+        setTimeout(() => showDayActionSheet(dateStr, date), 50);
+      } else if (action === 'show-picker') {
+        // Hide the main action section, show only the picker
+        const mainSection = document.getElementById('dayActionMain');
+        const picker = document.getElementById('dayActionPicker');
+        if (mainSection) mainSection.style.display = 'none';
+        if (picker) picker.style.display = 'block';
+      } else if (action === 'start-workout') {
+        const routineId = btn.dataset.routineId;
+        close();
+        startWorkout(routineId);
+      } else if (action === 'toggle-recurring') {
+        if (recurringRule) {
+          removeRecurringRule(dow);
+        } else {
+          // Set recurring with current routine (if any)
+          addRecurringRule(dow, currentRoutineId);
+        }
+        close();
+        rerenderWeekStrip();
+      } else if (action === 'remove') {
+        if (isFromRecurring) {
+          // Override recurring for this specific date: set to explicitly empty
+          setScheduleDay(dateStr, false);
+        } else {
+          setScheduleDay(dateStr, null);
+        }
+        close();
+        rerenderWeekStrip();
+      }
+    });
+  });
+
+  // Routine picker items
+  overlay.querySelectorAll('.day-action-routine-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const routineId = item.dataset.routineId;
+      setScheduleDay(dateStr, { routineId });
+      // Also update recurring rule if one exists for this day of week
+      const currentRule = getRecurringRule(dow);
+      if (currentRule) {
+        addRecurringRule(dow, routineId);
+      }
+      rerenderWeekStrip();
+      // Re-open sheet to show management options (start, recurring, etc.)
+      close();
+      setTimeout(() => showDayActionSheet(dateStr, date), 50);
+    });
+  });
 }
 
 // Dumbbell SVG icon (reused)
@@ -603,6 +886,7 @@ function renderWeekStrip(weekOffset) {
                     : '<span class="week-icon-rest"></span>'
               }
             </div>
+            ${d.routineName && (d.status === 'scheduled' || d.status === 'missed') ? `<span class="week-day-routine">${esc(d.routineName)}</span>` : ''}
           </div>
         `,
           )
@@ -653,8 +937,9 @@ function bindWeekStripEvents() {
         const match = workouts.find((w) => toDateStr(w.finishedAt) === dateStr);
         if (match) Router.go('/history/workout', { workoutId: match.id });
       } else {
-        toggleScheduleDay(dateStr);
-        rerenderWeekStrip();
+        // Open action sheet for planning options
+        const date = new Date(dateStr + 'T12:00:00');
+        showDayActionSheet(dateStr, date);
       }
     };
 
@@ -1129,14 +1414,154 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     </div>
   `);
 
-  // ── Helper: rerender preserving current name ─────────────
-  function rerender() {
-    const nameInput = document.getElementById('routineName');
-    const name = nameInput ? nameInput.value : routineName;
-    renderRoutineEditor(name, selected, isEdit, routineId);
+  // ── Helper: partial update (preserves search input & focus) ─
+  function updateLists() {
+    const searchInput = document.getElementById('routineSearch');
+    const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    // Update selected list
+    const selectedList = document.getElementById('selectedList');
+    selectedList.innerHTML = selected.length === 0
+      ? '<li class="empty-row">No exercises added yet</li>'
+      : selected.map((ex, i) => `
+          <li class="exercise-item selected-item" draggable="true" data-index="${i}">
+            <span class="drag-handle">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+            </span>
+            <div class="ex-info">
+              <span class="ex-name">${esc(ex.name)}</span>
+              <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
+            </div>
+            <button class="btn-remove" data-remove="${i}" aria-label="Remove">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </li>
+        `).join('');
+
+    // Update badge count
+    const badge = document.querySelector('.section-title .badge');
+    if (badge) badge.textContent = selected.length;
+
+    // Update available list (apply current search filter)
+    let filtered = allExercises;
+    if (q)
+      filtered = filtered.filter(
+        (ex) =>
+          ex.name.toLowerCase().includes(q) ||
+          ex.muscle.toLowerCase().includes(q) ||
+          ex.equipment.toLowerCase().includes(q),
+      );
+    document.getElementById('availableList').innerHTML = renderAvailableExercises(filtered, selected);
+
+    // Re-bind item buttons (not drag — container listeners persist)
+    bindAddButtons();
+    bindRemoveButtons();
   }
 
-  // ── Save routine (re-bound every render) ─────────────────
+  // ── Bind add-exercise buttons ──────────────────────────────
+  function bindAddButtons() {
+    document.querySelectorAll('.btn-add-ex').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const exId = btn.dataset.exid;
+        const ex = allExercises.find((e) => e.id === exId);
+        if (ex && !selected.some((s) => s.id === exId)) {
+          selected.push({ ...ex });
+          updateLists();
+        }
+      });
+    });
+  }
+
+  // ── Bind remove-exercise buttons ───────────────────────────
+  function bindRemoveButtons() {
+    document.querySelectorAll('.btn-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selected.splice(parseInt(btn.dataset.remove), 1);
+        updateLists();
+      });
+    });
+  }
+
+  // ── Bind drag-and-drop reorder ─────────────────────────────
+  function bindDragReorder() {
+    let dragIdx = null;
+    const selList = document.getElementById('selectedList');
+
+    selList.addEventListener('dragstart', (e) => {
+      const item = e.target.closest('.selected-item');
+      if (!item) return;
+      dragIdx = parseInt(item.dataset.index);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    selList.addEventListener('dragend', (e) => {
+      const item = e.target.closest('.selected-item');
+      if (item) item.classList.remove('dragging');
+    });
+    selList.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    selList.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const item = e.target.closest('.selected-item');
+      if (!item) return;
+      const dropIdx = parseInt(item.dataset.index);
+      if (dragIdx != null && dragIdx !== dropIdx) {
+        const [moved] = selected.splice(dragIdx, 1);
+        selected.splice(dropIdx, 0, moved);
+        updateLists();
+      }
+    });
+
+    // ── Touch-based reorder for mobile ───────────────────────
+    let touchStartY = 0;
+    let touchItem = null;
+    let touchIdx = null;
+
+    selList.addEventListener(
+      'touchstart',
+      (e) => {
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) return;
+        touchItem = handle.closest('.selected-item');
+        touchIdx = parseInt(touchItem.dataset.index);
+        touchStartY = e.touches[0].clientY;
+        touchItem.classList.add('dragging');
+      },
+      { passive: true },
+    );
+
+    selList.addEventListener(
+      'touchmove',
+      (e) => {
+        if (!touchItem) return;
+      },
+      { passive: true },
+    );
+
+    selList.addEventListener('touchend', (e) => {
+      if (!touchItem) return;
+      const endY = e.changedTouches[0].clientY;
+      const diff = endY - touchStartY;
+      const threshold = 50;
+      if (Math.abs(diff) > threshold && touchIdx != null) {
+        const direction = diff > 0 ? 1 : -1;
+        const newIdx = Math.max(0, Math.min(selected.length - 1, touchIdx + direction));
+        if (newIdx !== touchIdx) {
+          const [moved] = selected.splice(touchIdx, 1);
+          selected.splice(newIdx, 0, moved);
+          updateLists();
+          return;
+        }
+      }
+      touchItem.classList.remove('dragging');
+      touchItem = null;
+      touchIdx = null;
+    });
+  }
+
+  // ── Save routine ───────────────────────────────────────────
   document.getElementById('saveRoutineBtn').addEventListener('click', () => {
     const name = document.getElementById('routineName').value.trim();
     if (!name) {
@@ -1170,7 +1595,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     Router.go('/');
   });
 
-  // ── Delete routine (re-bound every render) ───────────────
+  // ── Delete routine ─────────────────────────────────────────
   if (isEdit) {
     document.getElementById('deleteRoutineBtn').addEventListener('click', () => {
       if (confirm('Delete this workout?')) {
@@ -1181,56 +1606,38 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     });
   }
 
-  // ── Add exercise buttons (re-bound every render) ─────────
-  document.querySelectorAll('.btn-add-ex').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const exId = btn.dataset.exid;
-      const ex = allExercises.find((e) => e.id === exId);
-      if (ex && !selected.some((s) => s.id === exId)) {
-        selected.push({ ...ex });
-        rerender();
-      }
-    });
-  });
+  // ── Initial button bindings ────────────────────────────────
+  bindAddButtons();
+  bindRemoveButtons();
+  bindDragReorder();
 
-  // ── Remove exercise buttons (re-bound every render) ──────
-  document.querySelectorAll('.btn-remove').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      selected.splice(parseInt(btn.dataset.remove), 1);
-      rerender();
-    });
-  });
-
-  // ── Search ───────────────────────────────────────────────
+  // ── Search ─────────────────────────────────────────────────
   const routineSearchInput = document.getElementById('routineSearch');
   routineSearchInput.addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase().trim();
     let filtered = allExercises;
     if (q)
       filtered = filtered.filter(
-        (ex) => ex.name.toLowerCase().includes(q) || ex.muscle.toLowerCase().includes(q),
+        (ex) =>
+          ex.name.toLowerCase().includes(q) ||
+          ex.muscle.toLowerCase().includes(q) ||
+          ex.equipment.toLowerCase().includes(q),
       );
     document.getElementById('availableList').innerHTML = renderAvailableExercises(
       filtered,
       selected,
     );
-    // Re-bind add buttons for the new search results
-    document.querySelectorAll('.btn-add-ex').forEach((btn2) => {
-      btn2.addEventListener('click', () => {
-        const exId2 = btn2.dataset.exid;
-        const ex2 = allExercises.find((e) => e.id === exId2);
-        if (ex2 && !selected.some((s) => s.id === exId2)) {
-          selected.push({ ...ex2 });
-          rerender();
-        }
-      });
-    });
+    bindAddButtons();
   });
 
-  // Scroll to search on focus to prevent layout jumps
+  // Scroll search bar into view on focus, pinning it just below the header
   routineSearchInput.addEventListener('focus', () => {
     setTimeout(() => {
-      routineSearchInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const header = document.querySelector('.header');
+      const headerH = header ? header.offsetHeight : 0;
+      const barRect = routineSearchInput.closest('.search-bar').getBoundingClientRect();
+      const scrollY = window.pageYOffset + barRect.top - headerH - 4;
+      window.scrollTo({ top: Math.max(0, scrollY), behavior: 'smooth' });
     }, 300);
   });
 
@@ -1240,83 +1647,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       e.preventDefault();
       routineSearchInput.blur();
     }
-  });
-
-  // ── Drag-and-drop reorder ────────────────────────────────
-  let dragIdx = null;
-  const selectedList = document.getElementById('selectedList');
-
-  selectedList.addEventListener('dragstart', (e) => {
-    const item = e.target.closest('.selected-item');
-    if (!item) return;
-    dragIdx = parseInt(item.dataset.index);
-    item.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-  });
-  selectedList.addEventListener('dragend', (e) => {
-    const item = e.target.closest('.selected-item');
-    if (item) item.classList.remove('dragging');
-  });
-  selectedList.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  });
-  selectedList.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const item = e.target.closest('.selected-item');
-    if (!item) return;
-    const dropIdx = parseInt(item.dataset.index);
-    if (dragIdx != null && dragIdx !== dropIdx) {
-      const [moved] = selected.splice(dragIdx, 1);
-      selected.splice(dropIdx, 0, moved);
-      rerender();
-    }
-  });
-
-  // ── Touch-based reorder for mobile ───────────────────────
-  let touchStartY = 0;
-  let touchItem = null;
-  let touchIdx = null;
-
-  selectedList.addEventListener(
-    'touchstart',
-    (e) => {
-      const handle = e.target.closest('.drag-handle');
-      if (!handle) return;
-      touchItem = handle.closest('.selected-item');
-      touchIdx = parseInt(touchItem.dataset.index);
-      touchStartY = e.touches[0].clientY;
-      touchItem.classList.add('dragging');
-    },
-    { passive: true },
-  );
-
-  selectedList.addEventListener(
-    'touchmove',
-    (e) => {
-      if (!touchItem) return;
-    },
-    { passive: true },
-  );
-
-  selectedList.addEventListener('touchend', (e) => {
-    if (!touchItem) return;
-    const endY = e.changedTouches[0].clientY;
-    const diff = endY - touchStartY;
-    const threshold = 50;
-    if (Math.abs(diff) > threshold && touchIdx != null) {
-      const direction = diff > 0 ? 1 : -1;
-      const newIdx = Math.max(0, Math.min(selected.length - 1, touchIdx + direction));
-      if (newIdx !== touchIdx) {
-        const [moved] = selected.splice(touchIdx, 1);
-        selected.splice(newIdx, 0, moved);
-        rerender();
-        return;
-      }
-    }
-    touchItem.classList.remove('dragging');
-    touchItem = null;
-    touchIdx = null;
   });
 }
 
@@ -2386,14 +2716,14 @@ function doFinishWorkout(w) {
 
   // ── Schedule stacking: if workout done on unscheduled day, consume next scheduled day ──
   const schedule = Store.getSchedule();
-  const scheduledDays = schedule.days || {};
   const today = toDateStr(new Date());
-  const todayScheduled = scheduledDays[today] === true;
+  const todayEntry = resolveScheduleEntry(today, new Date(), schedule);
+  const todayScheduled = todayEntry != null;
 
-  if (!todayScheduled && Object.keys(scheduledDays).length > 0) {
+  if (!todayScheduled && Object.keys(schedule.days || {}).length > 0) {
     // Find the next future scheduled day and remove it
-    const futureDates = Object.keys(scheduledDays)
-      .filter((d) => d > today)
+    const futureDates = Object.keys(schedule.days)
+      .filter((d) => d > today && schedule.days[d] !== false)
       .sort();
     if (futureDates.length > 0) {
       delete schedule.days[futureDates[0]];
