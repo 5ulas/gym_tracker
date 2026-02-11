@@ -245,95 +245,186 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// ── Muscle group icons (emoji) ───────────────────────────────
-const MUSCLE_ICON = {
-  Legs: '🦵',
-  Chest: '🫁',
-  Back: '🔙',
-  Shoulders: '💪',
-  Arms: '💪',
-  Core: '🧘',
-  Bodyweight: '🏋️',
-  default: '🏋️',
+// ── Muscle group SVG icons ───────────────────────────────────
+const MUSCLE_SVG = {
+  Chest: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4C10 4 6 5 4 8c-1.5 2.2-1 5 0 6.5C5.5 16.5 8 17 9.5 17c1 0 1.8-.3 2.5-1 .7.7 1.5 1 2.5 1 1.5 0 4-.5 5.5-2.5 1-1.5 1.5-4.3 0-6.5C18 5 14 4 12 4z"/><line x1="12" y1="6" x2="12" y2="15"/></svg>`,
+  Back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-1.5 0-3 .5-4 1.5S6.5 7 6.5 9c0 2 .5 4 1 5.5s1.5 3.5 2 4.5c.4.8 1.5 2 2.5 2s2.1-1.2 2.5-2c.5-1 1.5-3 2-4.5s1-3.5 1-5.5c0-2-.5-3.5-1.5-4.5S13.5 3 12 3z"/><line x1="12" y1="5" x2="12" y2="19"/><path d="M8 7c1 1 2.5 2 4 2s3-1 4-2"/><path d="M8.5 12c1 .8 2 1.2 3.5 1.2s2.5-.4 3.5-1.2"/></svg>`,
+  Shoulders: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" transform="translate(0,4)"/><path d="M5 14c0-3 2-5.5 4.5-6.5" transform="translate(0,2)"/><path d="M19 14c0-3-2-5.5-4.5-6.5" transform="translate(0,2)"/><circle cx="5" cy="14" r="2.5" transform="translate(0,2)"/><circle cx="19" cy="14" r="2.5" transform="translate(0,2)"/></svg>`,
+  Arms: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20v-4c0-1-.5-2-1.5-3S4 10.5 4 8.5 5 4 7 4s4 1.5 4 4c0 1.5-.5 2-1 3"/><path d="M7 4c.5-1 1.5-1.5 2.5-1.5"/><path d="M10 11c1.5 1 2 3 2 5v4"/><ellipse cx="8" cy="8" rx="2.5" ry="3.5"/></svg>`,
+  Legs: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2c-.5 2-1 4.5-1 7 0 3 .5 5 1 7 .3 1.2.5 3 .5 4.5V22"/><path d="M15 2c.5 2 1 4.5 1 7 0 3-.5 5-1 7-.3 1.2-.5 3-.5 4.5V22"/><ellipse cx="9.5" cy="7" rx="2" ry="4"/><ellipse cx="14.5" cy="7" rx="2" ry="4"/><path d="M8 17h2.5M13.5 17H16"/></svg>`,
+  Core: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="3"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="7.5" y1="8" x2="16.5" y2="8"/><line x1="7.5" y1="12" x2="16.5" y2="12"/><line x1="7.5" y1="16" x2="16.5" y2="16"/></svg>`,
+  default: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11"/><rect x="5" y="8" width="3" height="8" rx="1"/><rect x="16" y="8" width="3" height="8" rx="1"/><rect x="3" y="9.5" width="2" height="5" rx="0.5"/><rect x="19" y="9.5" width="2" height="5" rx="0.5"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
 };
-function muscleIcon(muscle) {
-  return MUSCLE_ICON[muscle] || MUSCLE_ICON.default;
+
+function muscleSvg(muscle) {
+  return MUSCLE_SVG[muscle] || MUSCLE_SVG.default;
 }
 
-// ── Exercise images (wger.de API) ───────────────────────────
-const EXERCISE_IMAGE = {
-  // Chest
-  ex2:  'https://wger.de/media/exercise-images/192/Bench-press-1.png',                                             // Bench Press
-  ex12: 'https://wger.de/media/exercise-images/16/Incline-press-1.png',                                            // Incline Dumbbell Press
-  ex13: 'https://wger.de/media/exercise-images/238/2fc242d3-5bdd-4f97-99bd-678adb8c96fc.png',                      // Cable Fly
-  ex16: 'https://wger.de/media/exercise-images/41/Incline-bench-press-1.png',                                      // Incline Barbell Press
-  ex17: 'https://wger.de/media/exercise-images/97/Dumbbell-bench-press-1.png',                                     // Dumbbell Bench Press
-  ex19: 'https://wger.de/media/exercise-images/1655/b263c968-e067-4750-916a-d8758a7df23e.webp',                    // Pec Deck Machine
-  ex20: 'https://wger.de/media/exercise-images/100/Decline-bench-press-1.png',                                     // Decline Bench Press
-  ex21: 'https://wger.de/media/exercise-images/1551/a6a9e561-3965-45c6-9f2b-ee671e1a3a45.png',                    // Push-ups
-
-  // Back
-  ex3:  'https://wger.de/media/exercise-images/184/1709c405-620a-4d07-9658-fade2b66a2df.jpeg',                     // Deadlift
-  ex5:  'https://wger.de/media/exercise-images/109/Barbell-rear-delt-row-1.png',                                   // Barbell Row
-  ex6:  'https://wger.de/media/exercise-images/475/b0554016-16fd-4dbe-be47-a2a17d16ae0e.jpg',                      // Pull-ups
-  ex14: 'https://wger.de/media/exercise-images/158/02e8a7c3-dc67-434e-a4bc-77fdecf84b49.webp',                    // Lat Pulldown
-  ex23: 'https://wger.de/media/exercise-images/1117/e74255c0-67a0-4309-b78d-2d79e6ff8c11.png',                    // Seated Cable Row
-  ex24: 'https://wger.de/media/exercise-images/106/T-bar-row-1.png',                                               // T-Bar Row
-  ex25: 'https://wger.de/media/exercise-images/81/a751a438-ae2d-4751-8d61-cef0e9292174.png',                       // Dumbbell Row
-  ex26: 'https://wger.de/media/exercise-images/181/Chin-ups-2.png',                                                // Chin-ups
-  ex28: 'https://wger.de/media/exercise-images/1726/2e7e541b-5f55-405a-ae78-3e71b3f42db4.png',                    // Straight Arm Pulldown
-  ex30: 'https://wger.de/media/exercise-images/1283/e7262f70-7512-408a-8d00-4c499ef632fc.jpg',                    // Chest Supported Row
-  ex31: 'https://wger.de/media/exercise-images/161/Dead-lifts-2.png',                                              // Rack Pull
-
-  // Shoulders
-  ex4:  'https://wger.de/media/exercise-images/119/seated-barbell-shoulder-press-large-1.png',                     // Overhead Press
-  ex10: 'https://wger.de/media/exercise-images/148/lateral-dumbbell-raises-large-2.png',                           // Lateral Raise
-  ex32: 'https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png',                           // Seated Dumbbell Press
-  ex34: 'https://wger.de/media/exercise-images/1378/7c1fcf34-fb7e-45e7-a0c1-51f296235315.jpg',                    // Cable Lateral Raise
-  ex35: 'https://wger.de/media/exercise-images/829/ad724e5c-b1ed-49e8-9279-a17545b0dd0b.png',                     // Rear Delt Fly
-  ex36: 'https://wger.de/media/exercise-images/693/05c91bd2-7814-40b6-b2d1-51ae942b8321.png',                     // Upright Row
-  ex37: 'https://wger.de/media/exercise-images/53/Shoulder-press-machine-2.png',                                   // Machine Shoulder Press
-  ex38: 'https://wger.de/media/exercise-images/256/b7def5bc-2352-499b-b9e5-fff741003831.png',                     // Front Raise
-  ex39: 'https://wger.de/media/exercise-images/1744/cb9263c4-39fc-4261-8d30-a5d6d57841c1.jpg',                    // Reverse Pec Deck
-
-  // Arms
-  ex7:  'https://wger.de/media/exercise-images/81/Biceps-curl-1.png',                                              // Dumbbell Curl
-  ex8:  'https://wger.de/media/exercise-images/1185/c5ca283d-8958-4fd8-9d59-a3f52a3ac66b.jpg',                    // Tricep Pushdown
-  ex40: 'https://wger.de/media/exercise-images/74/Bicep-curls-1.png',                                              // Barbell Curl
-  ex41: 'https://wger.de/media/exercise-images/1567/0a8c155c-a48e-47e8-9df3-e39f025c6cad.png',                    // Hammer Curl
-  ex42: 'https://wger.de/media/exercise-images/50/695ced5c-9961-4076-add2-cb250d01089e.png',                       // Skull Crushers
-  ex43: 'https://wger.de/media/exercise-images/1336/ebf88217-df26-4ef7-94cb-f0c2220c6abe.webp',                   // Overhead Tricep Extension
-  ex44: 'https://wger.de/media/exercise-images/193/Preacher-curl-3-1.png',                                         // Preacher Curl
-  ex45: 'https://wger.de/media/exercise-images/129/Standing-biceps-curl-1.png',                                    // Cable Curl
-  ex46: 'https://wger.de/media/exercise-images/1649/441cc0e5-eca2-4828-8b0a-a0e554abb2ff.jpg',                    // Concentration Curl
-  ex47: 'https://wger.de/media/exercise-images/88/Narrow-grip-bench-press-1.png',                                  // Close Grip Bench Press
-  ex49: 'https://wger.de/media/exercise-images/74/Bicep-curls-1.png',                                              // EZ-Bar Curl
-  ex51: 'https://wger.de/media/exercise-images/51/f1730f56-7aca-4566-8338-3e42b1bee6e1.webp',                     // Wrist Curl
-
-  // Legs
-  ex1:  'https://wger.de/media/exercise-images/1805/f166c599-4c03-42a0-9250-47f82a1f096d.jpg',                    // Barbell Squat
-  ex9:  'https://wger.de/media/exercise-images/371/d2136f96-3a43-4d4c-9944-1919c4ca1ce1.webp',                    // Leg Press
-  ex11: 'https://wger.de/media/exercise-images/1750/c5ff74e1-b494-4df0-a13f-89c630b88ef9.webp',                   // Romanian Deadlift
-  ex15: 'https://wger.de/media/exercise-images/364/b318dde9-f5f2-489f-940a-cd864affb9e3.png',                     // Leg Curl
-  ex52: 'https://wger.de/media/exercise-images/1706/0c5243cc-2539-4005-aee0-d3a8c5d3a32c.jfif',                   // Bulgarian Split Squat
-  ex54: 'https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png',                                    // Front Squat
-  ex55: 'https://wger.de/media/exercise-images/1614/7f3cfae2-e062-4211-9a6b-5a10851ce7f4.jpg',                    // Hip Thrust
-  ex56: 'https://wger.de/media/exercise-images/113/Walking-lunges-1.png',                                          // Walking Lunges
-  ex57: 'https://wger.de/media/exercise-images/203/1c052351-2af0-4227-aeb0-244008e4b0a8.jpeg',                    // Goblet Squat
-  ex59: 'https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg',                    // Standing Calf Raise
-  ex61: 'https://wger.de/media/exercise-images/630/b0f0c7d8-5878-4d9e-b820-21acc013741d.webp',                    // Sumo Deadlift
-
-  // Core
-  ex65: 'https://wger.de/media/exercise-images/125/Leg-raises-2.png',                                              // Hanging Leg Raise
+// ── Muscle group color accents ──────────────────────────────
+const MUSCLE_COLOR = {
+  Chest: '#ff6b6b',
+  Back: '#4ecdc4',
+  Shoulders: '#ffd93d',
+  Arms: '#6c5ce7',
+  Legs: '#0984e3',
+  Core: '#fd79a8',
+  default: '#636e72',
 };
+
+function muscleColor(muscle) {
+  return MUSCLE_COLOR[muscle] || MUSCLE_COLOR.default;
+}
 
 function exerciseIcon(exerciseId, muscle, cssClass = 'ex-icon') {
-  const imgUrl = EXERCISE_IMAGE[exerciseId];
-  if (imgUrl) {
-    return `<span class="${cssClass} ex-icon-img"><img src="${imgUrl}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='${muscleIcon(muscle)}'"></span>`;
-  }
-  return `<span class="${cssClass}">${muscleIcon(muscle)}</span>`;
+  const color = muscleColor(muscle);
+  const svg = muscleSvg(muscle);
+  return `<span class="${cssClass} ex-icon-muscle" style="color:${color};background:${color}15" data-exercise-info="${exerciseId}">${svg}</span>`;
 }
+
+// ── Exercise instruction cues ───────────────────────────────
+const EXERCISE_CUES = {
+  // Chest
+  ex2:  { targets: 'Pecs, front delts, triceps', cues: ['Retract shoulder blades', 'Plant feet flat on floor', 'Touch chest, press to lockout', 'Keep wrists stacked over elbows'] },
+  ex12: { targets: 'Upper chest, front delts', cues: ['Set bench to 30-45°', 'Squeeze pecs at the top', 'Control the negative', 'Don\'t flare elbows past 75°'] },
+  ex13: { targets: 'Inner chest, pec stretch', cues: ['Slight bend in elbows', 'Squeeze chest at center', 'Control the stretch wide', 'Keep shoulders down'] },
+  ex16: { targets: 'Upper chest, triceps', cues: ['Set bench to 30-45°', 'Grip slightly wider than shoulders', 'Touch upper chest', 'Drive through feet'] },
+  ex17: { targets: 'Chest, stabilizers', cues: ['Arc dumbbells, don\'t press straight', 'Touch outer chest', 'Squeeze at the top', 'Keep wrists neutral'] },
+  ex18: { targets: 'Lower chest, triceps', cues: ['Lean torso forward', 'Elbows flare slightly out', 'Go to 90° elbow bend', 'Drive up to lockout'] },
+  ex19: { targets: 'Inner chest', cues: ['Sit tall, shoulders back', 'Squeeze pads together slowly', 'Hold the squeeze 1 second', 'Control the return'] },
+  ex20: { targets: 'Lower chest, triceps', cues: ['Set bench to 15-30° decline', 'Touch lower chest', 'Press to lockout', 'Keep core tight'] },
+  ex21: { targets: 'Chest, core, triceps', cues: ['Hands shoulder-width apart', 'Body in straight line', 'Chest touches floor', 'Squeeze core throughout'] },
+  ex22: { targets: 'Upper chest, front delts', cues: ['Wedge one end in corner', 'Press upward at 45°', 'Keep core braced', 'Control the arc'] },
+  // Back
+  ex3:  { targets: 'Entire posterior chain', cues: ['Hinge at hips, chest up', 'Bar stays close to body', 'Drive through heels', 'Lock hips and knees together'] },
+  ex5:  { targets: 'Upper back, lats, rear delts', cues: ['Hinge to ~45° torso angle', 'Pull bar to lower chest', 'Squeeze shoulder blades', 'Control the negative'] },
+  ex6:  { targets: 'Lats, biceps, upper back', cues: ['Start from dead hang', 'Pull chest to bar', 'Engage lats first', 'Full extension at bottom'] },
+  ex14: { targets: 'Lats, biceps', cues: ['Lean back slightly', 'Pull bar to upper chest', 'Squeeze lats at bottom', 'Control the return'] },
+  ex23: { targets: 'Mid back, rhomboids, lats', cues: ['Sit tall, chest up', 'Pull handle to lower chest', 'Squeeze shoulder blades', 'Don\'t lean back too far'] },
+  ex24: { targets: 'Mid back, lats, traps', cues: ['Straddle the bar', 'Hinge torso 45°', 'Pull to chest', 'Keep elbows close'] },
+  ex25: { targets: 'Lats, rhomboids', cues: ['One knee on bench', 'Pull to hip/waist', 'Keep back flat', 'Squeeze at the top'] },
+  ex26: { targets: 'Biceps, lats', cues: ['Supinated (palms in) grip', 'Pull chin over bar', 'Control the descent', 'Full extension at bottom'] },
+  ex27: { targets: 'Rear delts, upper back', cues: ['Use rope attachment', 'Pull to face level', 'Separate rope at end', 'Squeeze rear delts'] },
+  ex28: { targets: 'Lats, teres major', cues: ['Keep arms straight', 'Pull bar down in an arc', 'Squeeze lats at bottom', 'Lean slightly forward'] },
+  ex29: { targets: 'Back, glutes, hamstrings', cues: ['Bar starts on floor each rep', 'Explosive pull', 'Reset position each rep', 'Keep back flat'] },
+  ex30: { targets: 'Upper back, rear delts', cues: ['Chest on incline bench', 'Row dumbbells to waist', 'Squeeze shoulder blades', 'Eliminates momentum'] },
+  ex31: { targets: 'Upper back, traps, glutes', cues: ['Set pins at knee height', 'Overhand or mixed grip', 'Drive hips forward', 'Squeeze at lockout'] },
+  // Shoulders
+  ex4:  { targets: 'Front & side delts, triceps', cues: ['Grip just outside shoulders', 'Press from clavicle to overhead', 'Lock out at the top', 'Brace your core'] },
+  ex10: { targets: 'Side delts', cues: ['Slight bend in elbows', 'Raise to shoulder height', 'Lead with elbows not hands', 'Control the descent'] },
+  ex32: { targets: 'Front & side delts', cues: ['Start at ear height', 'Press up and slightly in', 'Don\'t lock elbows hard', 'Keep core tight'] },
+  ex33: { targets: 'All three delt heads', cues: ['Start palms facing you', 'Rotate as you press up', 'Finish palms forward', 'Control the rotation'] },
+  ex34: { targets: 'Side delts', cues: ['Stand sideways to cable', 'Raise arm to shoulder height', 'Constant tension on cable', 'Slow negative'] },
+  ex35: { targets: 'Rear delts, upper back', cues: ['Bend forward at hips', 'Raise arms out to sides', 'Squeeze shoulder blades', 'Slight bend in elbows'] },
+  ex36: { targets: 'Side delts, traps', cues: ['Pull bar along body', 'Elbows lead the movement', 'Raise to chin height', 'Keep bar close'] },
+  ex37: { targets: 'Front & side delts', cues: ['Adjust seat height', 'Press to full extension', 'Control the negative', 'Keep back against pad'] },
+  ex38: { targets: 'Front delts', cues: ['Slight bend in elbows', 'Raise to eye level', 'Alternate or together', 'Don\'t swing momentum'] },
+  ex39: { targets: 'Rear delts', cues: ['Face the machine', 'Push handles back', 'Squeeze rear delts', 'Controlled return'] },
+  // Arms
+  ex7:  { targets: 'Biceps', cues: ['Keep elbows pinned to sides', 'Full range of motion', 'Squeeze at the top', 'Control the negative'] },
+  ex8:  { targets: 'Triceps', cues: ['Keep elbows at sides', 'Push down to full extension', 'Squeeze triceps at bottom', 'Don\'t flare elbows'] },
+  ex40: { targets: 'Biceps, forearms', cues: ['Shoulder-width grip', 'Keep elbows stationary', 'Squeeze at the top', 'Full extension at bottom'] },
+  ex41: { targets: 'Brachialis, biceps', cues: ['Neutral (hammer) grip', 'Keep elbows at sides', 'Curl to shoulder height', 'Control the descent'] },
+  ex42: { targets: 'Triceps long head', cues: ['Lower bar to forehead', 'Keep upper arms vertical', 'Extend to lockout', 'Don\'t flare elbows'] },
+  ex43: { targets: 'Triceps long head', cues: ['Keep elbows close to head', 'Lower behind head slowly', 'Extend to full lockout', 'Don\'t arch back'] },
+  ex44: { targets: 'Biceps peak', cues: ['Arm flat on pad', 'Curl to full contraction', 'Slow negative', 'Don\'t lift elbow off pad'] },
+  ex45: { targets: 'Biceps', cues: ['Stand facing cable', 'Curl handle to chin', 'Constant cable tension', 'Squeeze at the top'] },
+  ex46: { targets: 'Biceps peak', cues: ['Elbow on inner thigh', 'Curl to shoulder', 'Squeeze at peak', 'Full stretch at bottom'] },
+  ex47: { targets: 'Triceps, inner chest', cues: ['Grip narrower than shoulders', 'Keep elbows tucked', 'Touch lower chest', 'Lock out at the top'] },
+  ex48: { targets: 'Triceps, chest', cues: ['Keep torso upright', 'Elbows back, not flared', 'Lower to 90° bend', 'Press to full lockout'] },
+  ex49: { targets: 'Biceps', cues: ['Use EZ-bar angles', 'Keep elbows at sides', 'Curl to full contraction', 'Don\'t swing'] },
+  ex50: { targets: 'Triceps', cues: ['Hinge forward at hips', 'Extend arm fully back', 'Squeeze tricep at top', 'Keep upper arm still'] },
+  ex51: { targets: 'Forearm flexors', cues: ['Forearms on bench/thighs', 'Curl wrists up', 'Full range of motion', 'Don\'t lift forearms'] },
+  // Legs
+  ex1:  { targets: 'Quads, glutes, core', cues: ['Bar on upper traps', 'Break at hips and knees', 'Depth: hip crease below knee', 'Drive through full foot'] },
+  ex9:  { targets: 'Quads, glutes', cues: ['Feet shoulder-width on platform', 'Lower until 90° knee bend', 'Press through heels', 'Don\'t lock knees hard'] },
+  ex11: { targets: 'Hamstrings, glutes', cues: ['Hinge at hips', 'Slight knee bend, keep fixed', 'Feel hamstring stretch', 'Squeeze glutes at top'] },
+  ex15: { targets: 'Hamstrings', cues: ['Adjust pad above ankles', 'Curl heels to glutes', 'Squeeze hamstrings', 'Control the return'] },
+  ex52: { targets: 'Quads, glutes, balance', cues: ['Rear foot on bench', 'Front knee over ankle', 'Drop back knee down', 'Push through front heel'] },
+  ex53: { targets: 'Quads', cues: ['Adjust pad on shins', 'Extend to full lockout', 'Squeeze quads at top', 'Control the descent'] },
+  ex54: { targets: 'Quads, core', cues: ['Bar on front delts', 'Elbows high, chest up', 'Same squat depth', 'Core stays very tight'] },
+  ex55: { targets: 'Glutes, hamstrings', cues: ['Upper back on bench', 'Bar on hip crease', 'Drive through heels', 'Squeeze glutes at top'] },
+  ex56: { targets: 'Quads, glutes, balance', cues: ['Long stride forward', 'Back knee nearly touches floor', 'Keep torso upright', 'Push through front heel'] },
+  ex57: { targets: 'Quads, core', cues: ['Hold dumbbell at chest', 'Squat between knees', 'Elbows inside knees', 'Keep torso upright'] },
+  ex58: { targets: 'Quads', cues: ['Feet on platform shoulder-width', 'Lower until 90° bend', 'Press through full foot', 'Keep back against pad'] },
+  ex59: { targets: 'Calves (gastrocnemius)', cues: ['Balls of feet on edge', 'Full stretch at bottom', 'Rise to full contraction', 'Hold top for 1 second'] },
+  ex60: { targets: 'Calves (soleus)', cues: ['Knees bent at 90°', 'Balls of feet on edge', 'Full range of motion', 'Slow controlled reps'] },
+  ex61: { targets: 'Glutes, inner thighs, back', cues: ['Wide stance, toes out', 'Hinge at hips', 'Bar close to body', 'Squeeze glutes at top'] },
+  ex62: { targets: 'Quads, glutes', cues: ['Step onto bench/box', 'Drive through top foot', 'Full hip extension at top', 'Control the step down'] },
+  ex63: { targets: 'Hamstrings, glutes', cues: ['Lock feet at ankles', 'Lower body with control', 'Hamstrings do the work', 'Use arms to push off floor if needed'] },
+  // Core
+  ex64: { targets: 'Entire core, transverse abs', cues: ['Forearms on floor', 'Body in straight line', 'Squeeze glutes and core', 'Don\'t let hips sag'] },
+  ex65: { targets: 'Lower abs, hip flexors', cues: ['Hang from bar', 'Raise legs to parallel', 'Control the swing', 'Slow negative'] },
+  ex66: { targets: 'Rectus abdominis', cues: ['Kneel facing cable', 'Crunch down rounding spine', 'Keep hips stationary', 'Squeeze abs at bottom'] },
+  ex67: { targets: 'Entire core, lats', cues: ['Start on knees', 'Roll out with straight arms', 'Go as far as you can control', 'Squeeze abs to roll back'] },
+  ex68: { targets: 'Obliques, core', cues: ['Lean back slightly', 'Rotate side to side', 'Keep feet off floor for harder', 'Control the twist'] },
+  ex69: { targets: 'Upper abs', cues: ['Secure feet at top', 'Cross arms or hands behind head', 'Curl up, don\'t jerk', 'Slow negative'] },
+  ex70: { targets: 'Anti-rotation, obliques', cues: ['Stand sideways to cable', 'Press handle straight out', 'Resist rotation', 'Hold 2-3 seconds extended'] },
+  ex71: { targets: 'Entire core', cues: ['Lie on bench, grip behind head', 'Raise legs and hips straight', 'Lower with extreme control', 'Advanced movement'] },
+  ex72: { targets: 'Core, cardio', cues: ['High plank position', 'Drive knees to chest fast', 'Keep hips level', 'Maintain breathing rhythm'] },
+  ex73: { targets: 'Core stability', cues: ['Lie on back', 'Opposite arm and leg extend', 'Keep lower back pressed down', 'Alternate sides slowly'] },
+};
+
+// ── Exercise GIF URLs (ExerciseDB / wger.de) ─────────────────
+const EXERCISE_GIF = {
+  // Chest
+  ex2:  'https://wger.de/media/exercise-images/192/Bench-press-1.png',
+  ex12: 'https://wger.de/media/exercise-images/16/Incline-press-1.png',
+  ex13: 'https://wger.de/media/exercise-images/238/2fc242d3-5bdd-4f97-99bd-678adb8c96fc.png',
+  ex16: 'https://wger.de/media/exercise-images/41/Incline-bench-press-1.png',
+  ex17: 'https://wger.de/media/exercise-images/97/Dumbbell-bench-press-1.png',
+  ex19: 'https://wger.de/media/exercise-images/1655/b263c968-e067-4750-916a-d8758a7df23e.webp',
+  ex20: 'https://wger.de/media/exercise-images/100/Decline-bench-press-1.png',
+  ex21: 'https://wger.de/media/exercise-images/1551/a6a9e561-3965-45c6-9f2b-ee671e1a3a45.png',
+  // Back
+  ex3:  'https://wger.de/media/exercise-images/184/1709c405-620a-4d07-9658-fade2b66a2df.jpeg',
+  ex5:  'https://wger.de/media/exercise-images/109/Barbell-rear-delt-row-1.png',
+  ex6:  'https://wger.de/media/exercise-images/475/b0554016-16fd-4dbe-be47-a2a17d16ae0e.jpg',
+  ex14: 'https://wger.de/media/exercise-images/158/02e8a7c3-dc67-434e-a4bc-77fdecf84b49.webp',
+  ex23: 'https://wger.de/media/exercise-images/1117/e74255c0-67a0-4309-b78d-2d79e6ff8c11.png',
+  ex24: 'https://wger.de/media/exercise-images/106/T-bar-row-1.png',
+  ex25: 'https://wger.de/media/exercise-images/81/a751a438-ae2d-4751-8d61-cef0e9292174.png',
+  ex26: 'https://wger.de/media/exercise-images/181/Chin-ups-2.png',
+  ex28: 'https://wger.de/media/exercise-images/1726/2e7e541b-5f55-405a-ae78-3e71b3f42db4.png',
+  ex30: 'https://wger.de/media/exercise-images/1283/e7262f70-7512-408a-8d00-4c499ef632fc.jpg',
+  ex31: 'https://wger.de/media/exercise-images/161/Dead-lifts-2.png',
+  // Shoulders
+  ex4:  'https://wger.de/media/exercise-images/119/seated-barbell-shoulder-press-large-1.png',
+  ex10: 'https://wger.de/media/exercise-images/148/lateral-dumbbell-raises-large-2.png',
+  ex32: 'https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png',
+  ex34: 'https://wger.de/media/exercise-images/1378/7c1fcf34-fb7e-45e7-a0c1-51f296235315.jpg',
+  ex35: 'https://wger.de/media/exercise-images/829/ad724e5c-b1ed-49e8-9279-a17545b0dd0b.png',
+  ex36: 'https://wger.de/media/exercise-images/693/05c91bd2-7814-40b6-b2d1-51ae942b8321.png',
+  ex37: 'https://wger.de/media/exercise-images/53/Shoulder-press-machine-2.png',
+  ex38: 'https://wger.de/media/exercise-images/256/b7def5bc-2352-499b-b9e5-fff741003831.png',
+  ex39: 'https://wger.de/media/exercise-images/1744/cb9263c4-39fc-4261-8d30-a5d6d57841c1.jpg',
+  // Arms
+  ex7:  'https://wger.de/media/exercise-images/81/Biceps-curl-1.png',
+  ex8:  'https://wger.de/media/exercise-images/1185/c5ca283d-8958-4fd8-9d59-a3f52a3ac66b.jpg',
+  ex40: 'https://wger.de/media/exercise-images/74/Bicep-curls-1.png',
+  ex41: 'https://wger.de/media/exercise-images/1567/0a8c155c-a48e-47e8-9df3-e39f025c6cad.png',
+  ex42: 'https://wger.de/media/exercise-images/50/695ced5c-9961-4076-add2-cb250d01089e.png',
+  ex43: 'https://wger.de/media/exercise-images/1336/ebf88217-df26-4ef7-94cb-f0c2220c6abe.webp',
+  ex44: 'https://wger.de/media/exercise-images/193/Preacher-curl-3-1.png',
+  ex45: 'https://wger.de/media/exercise-images/129/Standing-biceps-curl-1.png',
+  ex46: 'https://wger.de/media/exercise-images/1649/441cc0e5-eca2-4828-8b0a-a0e554abb2ff.jpg',
+  ex47: 'https://wger.de/media/exercise-images/88/Narrow-grip-bench-press-1.png',
+  ex49: 'https://wger.de/media/exercise-images/74/Bicep-curls-1.png',
+  ex51: 'https://wger.de/media/exercise-images/51/f1730f56-7aca-4566-8338-3e42b1bee6e1.webp',
+  // Legs
+  ex1:  'https://wger.de/media/exercise-images/1805/f166c599-4c03-42a0-9250-47f82a1f096d.jpg',
+  ex9:  'https://wger.de/media/exercise-images/371/d2136f96-3a43-4d4c-9944-1919c4ca1ce1.webp',
+  ex11: 'https://wger.de/media/exercise-images/1750/c5ff74e1-b494-4df0-a13f-89c630b88ef9.webp',
+  ex15: 'https://wger.de/media/exercise-images/364/b318dde9-f5f2-489f-940a-cd864affb9e3.png',
+  ex52: 'https://wger.de/media/exercise-images/1706/0c5243cc-2539-4005-aee0-d3a8c5d3a32c.jfif',
+  ex54: 'https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png',
+  ex55: 'https://wger.de/media/exercise-images/1614/7f3cfae2-e062-4211-9a6b-5a10851ce7f4.jpg',
+  ex56: 'https://wger.de/media/exercise-images/113/Walking-lunges-1.png',
+  ex57: 'https://wger.de/media/exercise-images/203/1c052351-2af0-4227-aeb0-244008e4b0a8.jpeg',
+  ex59: 'https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg',
+  ex61: 'https://wger.de/media/exercise-images/630/b0f0c7d8-5878-4d9e-b820-21acc013741d.webp',
+  // Core
+  ex65: 'https://wger.de/media/exercise-images/125/Leg-raises-2.png',
+};
 
 // ── Bottom Tab Bar ───────────────────────────────────────────
 function tabBar(active) {
@@ -3453,7 +3544,7 @@ function viewMuscleHeatmap() {
             const d = heatmapData[muscle] || { sessions: new Array(weeks).fill(0), totalSets: 0, totalVolume: 0 };
             return `
             <div class="heatmap-row">
-              <span class="heatmap-muscle-label">${muscleIcon(muscle)} ${esc(muscle)}</span>
+               <span class="heatmap-muscle-label"><span class="heatmap-muscle-svg" style="color:${muscleColor(muscle)}">${muscleSvg(muscle)}</span> ${esc(muscle)}</span>
               ${d.sessions
                 .map((count) => {
                   const intensity = count / maxWeekSessions;
@@ -3487,7 +3578,7 @@ function viewMuscleHeatmap() {
             return `
             <div class="heatmap-summary-card">
               <div class="heatmap-summary-header">
-                <span class="heatmap-summary-icon">${muscleIcon(muscle)}</span>
+                <span class="heatmap-summary-icon" style="color:${muscleColor(muscle)}">${muscleSvg(muscle)}</span>
                 <span class="heatmap-summary-name">${esc(muscle)}</span>
               </div>
               <div class="heatmap-summary-stats">
@@ -3748,6 +3839,118 @@ function viewSettings() {
   document.getElementById('btnClearData').addEventListener('click', clearAllData);
 }
 
+// ══════════════════════════════════════════════════════════════
+// Exercise Info Modal (slide-up detail panel)
+// ══════════════════════════════════════════════════════════════
+function showExerciseInfoModal(exerciseId) {
+  const exercises = Store.getExercises();
+  const exercise = exercises.find((e) => e.id === exerciseId);
+  if (!exercise) return;
+
+  const cues = EXERCISE_CUES[exerciseId];
+  const gifUrl = EXERCISE_GIF[exerciseId];
+  const color = muscleColor(exercise.muscle);
+
+  // Remove any existing modal
+  const existing = document.querySelector('.exercise-info-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'exercise-info-overlay';
+  overlay.innerHTML = `
+    <div class="exercise-info-backdrop"></div>
+    <div class="exercise-info-panel">
+      <div class="exercise-info-handle"></div>
+      <div class="exercise-info-header">
+        <span class="exercise-info-icon" style="color:${color};background:${color}15">${muscleSvg(exercise.muscle)}</span>
+        <div class="exercise-info-title">
+          <h2>${esc(exercise.name)}</h2>
+          <span class="exercise-info-meta">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</span>
+        </div>
+        <button class="exercise-info-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      ${cues ? `
+        <div class="exercise-info-section">
+          <div class="exercise-info-targets">
+            <span class="exercise-info-label">Targets</span>
+            <span class="exercise-info-targets-text">${esc(cues.targets)}</span>
+          </div>
+        </div>
+
+        <div class="exercise-info-section">
+          <span class="exercise-info-label">Form Cues</span>
+          <ul class="exercise-info-cues">
+            ${cues.cues.map((c) => `<li>${esc(c)}</li>`).join('')}
+          </ul>
+        </div>
+      ` : `
+        <div class="exercise-info-section">
+          <p class="exercise-info-empty">No form cues available for this exercise yet.</p>
+        </div>
+      `}
+
+      ${gifUrl ? `
+        <div class="exercise-info-section exercise-info-media">
+          <span class="exercise-info-label">Reference</span>
+          <div class="exercise-info-img-wrap">
+            <div class="exercise-info-loader">
+              <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="10" stroke-linecap="round"/></svg>
+              Loading image…
+            </div>
+            <img src="${gifUrl}" alt="${esc(exercise.name)}" class="exercise-info-img"
+                 loading="eager" />
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Image load/error handlers (programmatic to avoid inline escaping issues)
+  const infoImg = overlay.querySelector('.exercise-info-img');
+  if (infoImg) {
+    infoImg.addEventListener('load', () => {
+      infoImg.previousElementSibling.style.display = 'none';
+      infoImg.style.display = 'block';
+    });
+    infoImg.addEventListener('error', () => {
+      infoImg.previousElementSibling.innerHTML = '<span class="exercise-info-no-img">Image unavailable offline</span>';
+      infoImg.style.display = 'none';
+    });
+  }
+
+  // Animate in
+  requestAnimationFrame(() => {
+    overlay.classList.add('open');
+  });
+
+  // Close handlers
+  const close = () => {
+    overlay.classList.remove('open');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    // Fallback removal if no transition fires
+    setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 400);
+  };
+
+  overlay.querySelector('.exercise-info-backdrop').addEventListener('click', close);
+  overlay.querySelector('.exercise-info-close').addEventListener('click', close);
+
+  // Swipe-down to dismiss on panel
+  let startY = 0;
+  const panel = overlay.querySelector('.exercise-info-panel');
+  panel.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  panel.addEventListener('touchend', (e) => {
+    const diffY = e.changedTouches[0].clientY - startY;
+    if (diffY > 80) close();
+  }, { passive: true });
+}
+
 // ── Register Routes ──────────────────────────────────────────
 Router.on('/', viewRoutines);
 Router.on('/exercises', viewExercises);
@@ -3766,6 +3969,15 @@ Router.on('/settings', viewSettings);
 
 // ── Boot ─────────────────────────────────────────────────────
 Router.start();
+
+// ── Global: Exercise Info Modal delegation ───────────────────
+document.addEventListener('click', (e) => {
+  const icon = e.target.closest('[data-exercise-info]');
+  if (!icon) return;
+  e.stopPropagation();
+  e.preventDefault();
+  showExerciseInfoModal(icon.dataset.exerciseInfo);
+});
 
 // ── iOS viewport stabilization ──────────────────────────────
 // On iOS Safari/PWA, the visual viewport can shift on initial load

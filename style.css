@@ -281,7 +281,6 @@ body {
 }
 
 .ex-icon {
-  font-size: 1.4rem;
   width: 36px;
   height: 36px;
   background: var(--bg-elevated);
@@ -291,12 +290,15 @@ body {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.ex-icon-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
+.ex-icon:active {
+  transform: scale(0.9);
+}
+.ex-icon-muscle svg {
+  width: 22px;
+  height: 22px;
 }
 
 .ex-info {
@@ -1775,7 +1777,6 @@ select.form-input {
   background: var(--bg-elevated);
 }
 .progress-chip-icon {
-  font-size: 1.2rem;
   width: 32px;
   height: 32px;
   background: var(--bg-elevated);
@@ -1785,12 +1786,11 @@ select.form-input {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  cursor: pointer;
 }
-.progress-chip-icon.ex-icon-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 8px;
+.progress-chip-icon.ex-icon-muscle svg {
+  width: 20px;
+  height: 20px;
 }
 .progress-chip-name {
   flex: 1;
@@ -1880,7 +1880,6 @@ select.form-input {
   margin-bottom: 20px;
 }
 .progress-ex-icon {
-  font-size: 1.6rem;
   width: 48px;
   height: 48px;
   background: var(--bg-elevated);
@@ -1890,12 +1889,11 @@ select.form-input {
   justify-content: center;
   flex-shrink: 0;
   overflow: hidden;
+  cursor: pointer;
 }
-.progress-ex-icon.ex-icon-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 14px;
+.progress-ex-icon.ex-icon-muscle svg {
+  width: 28px;
+  height: 28px;
 }
 .progress-ex-name {
   font-size: 1.2rem;
@@ -2345,6 +2343,19 @@ select.form-input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.heatmap-muscle-svg {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.heatmap-muscle-svg svg {
+  width: 16px;
+  height: 16px;
 }
 
 .heatmap-header-row .heatmap-week-label {
@@ -2430,7 +2441,6 @@ select.form-input {
   margin-bottom: 10px;
 }
 .heatmap-summary-icon {
-  font-size: 1.2rem;
   width: 32px;
   height: 32px;
   background: var(--bg-elevated);
@@ -2439,6 +2449,10 @@ select.form-input {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+.heatmap-summary-icon svg {
+  width: 20px;
+  height: 20px;
 }
 .heatmap-summary-name {
   font-size: 0.95rem;
@@ -3122,4 +3136,197 @@ select.form-input {
   border-style: solid;
   border-color: var(--primary);
   background: rgba(0, 122, 255, 0.15);
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Exercise Info Modal                                           */
+/* ══════════════════════════════════════════════════════════════ */
+.exercise-info-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.exercise-info-overlay.open {
+  pointer-events: auto;
+}
+.exercise-info-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.exercise-info-overlay.open .exercise-info-backdrop {
+  opacity: 1;
+}
+.exercise-info-panel {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px calc(20px + var(--safe-bottom));
+  max-height: 80vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.exercise-info-overlay.open .exercise-info-panel {
+  transform: translateY(0);
+}
+.exercise-info-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--text-dim);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+  opacity: 0.5;
+}
+.exercise-info-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.exercise-info-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.exercise-info-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.exercise-info-title {
+  flex: 1;
+  min-width: 0;
+}
+.exercise-info-title h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+  line-height: 1.2;
+}
+.exercise-info-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.exercise-info-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--bg-elevated);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.exercise-info-close svg {
+  width: 16px;
+  height: 16px;
+}
+.exercise-info-section {
+  margin-bottom: 18px;
+}
+.exercise-info-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.exercise-info-targets-text {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+.exercise-info-cues {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exercise-info-cues li {
+  font-size: 0.88rem;
+  color: var(--text);
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  line-height: 1.3;
+  position: relative;
+  padding-left: 28px;
+}
+.exercise-info-cues li::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.exercise-info-empty {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.exercise-info-media {
+  margin-bottom: 8px;
+}
+.exercise-info-img-wrap {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.exercise-info-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  padding: 30px;
+}
+.exercise-info-loader .spinner {
+  width: 28px;
+  height: 28px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.exercise-info-img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  display: none;
+  border-radius: var(--radius);
+}
+.exercise-info-no-img {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  padding: 20px;
+  text-align: center;
 }
