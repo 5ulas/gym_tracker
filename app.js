@@ -260,6 +260,81 @@ function muscleIcon(muscle) {
   return MUSCLE_ICON[muscle] || MUSCLE_ICON.default;
 }
 
+// ── Exercise images (wger.de API) ───────────────────────────
+const EXERCISE_IMAGE = {
+  // Chest
+  ex2:  'https://wger.de/media/exercise-images/192/Bench-press-1.png',                                             // Bench Press
+  ex12: 'https://wger.de/media/exercise-images/16/Incline-press-1.png',                                            // Incline Dumbbell Press
+  ex13: 'https://wger.de/media/exercise-images/238/2fc242d3-5bdd-4f97-99bd-678adb8c96fc.png',                      // Cable Fly
+  ex16: 'https://wger.de/media/exercise-images/41/Incline-bench-press-1.png',                                      // Incline Barbell Press
+  ex17: 'https://wger.de/media/exercise-images/97/Dumbbell-bench-press-1.png',                                     // Dumbbell Bench Press
+  ex19: 'https://wger.de/media/exercise-images/1655/b263c968-e067-4750-916a-d8758a7df23e.webp',                    // Pec Deck Machine
+  ex20: 'https://wger.de/media/exercise-images/100/Decline-bench-press-1.png',                                     // Decline Bench Press
+  ex21: 'https://wger.de/media/exercise-images/1551/a6a9e561-3965-45c6-9f2b-ee671e1a3a45.png',                    // Push-ups
+
+  // Back
+  ex3:  'https://wger.de/media/exercise-images/184/1709c405-620a-4d07-9658-fade2b66a2df.jpeg',                     // Deadlift
+  ex5:  'https://wger.de/media/exercise-images/109/Barbell-rear-delt-row-1.png',                                   // Barbell Row
+  ex6:  'https://wger.de/media/exercise-images/475/b0554016-16fd-4dbe-be47-a2a17d16ae0e.jpg',                      // Pull-ups
+  ex14: 'https://wger.de/media/exercise-images/158/02e8a7c3-dc67-434e-a4bc-77fdecf84b49.webp',                    // Lat Pulldown
+  ex23: 'https://wger.de/media/exercise-images/1117/e74255c0-67a0-4309-b78d-2d79e6ff8c11.png',                    // Seated Cable Row
+  ex24: 'https://wger.de/media/exercise-images/106/T-bar-row-1.png',                                               // T-Bar Row
+  ex25: 'https://wger.de/media/exercise-images/81/a751a438-ae2d-4751-8d61-cef0e9292174.png',                       // Dumbbell Row
+  ex26: 'https://wger.de/media/exercise-images/181/Chin-ups-2.png',                                                // Chin-ups
+  ex28: 'https://wger.de/media/exercise-images/1726/2e7e541b-5f55-405a-ae78-3e71b3f42db4.png',                    // Straight Arm Pulldown
+  ex30: 'https://wger.de/media/exercise-images/1283/e7262f70-7512-408a-8d00-4c499ef632fc.jpg',                    // Chest Supported Row
+  ex31: 'https://wger.de/media/exercise-images/161/Dead-lifts-2.png',                                              // Rack Pull
+
+  // Shoulders
+  ex4:  'https://wger.de/media/exercise-images/119/seated-barbell-shoulder-press-large-1.png',                     // Overhead Press
+  ex10: 'https://wger.de/media/exercise-images/148/lateral-dumbbell-raises-large-2.png',                           // Lateral Raise
+  ex32: 'https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png',                           // Seated Dumbbell Press
+  ex34: 'https://wger.de/media/exercise-images/1378/7c1fcf34-fb7e-45e7-a0c1-51f296235315.jpg',                    // Cable Lateral Raise
+  ex35: 'https://wger.de/media/exercise-images/829/ad724e5c-b1ed-49e8-9279-a17545b0dd0b.png',                     // Rear Delt Fly
+  ex36: 'https://wger.de/media/exercise-images/693/05c91bd2-7814-40b6-b2d1-51ae942b8321.png',                     // Upright Row
+  ex37: 'https://wger.de/media/exercise-images/53/Shoulder-press-machine-2.png',                                   // Machine Shoulder Press
+  ex38: 'https://wger.de/media/exercise-images/256/b7def5bc-2352-499b-b9e5-fff741003831.png',                     // Front Raise
+  ex39: 'https://wger.de/media/exercise-images/1744/cb9263c4-39fc-4261-8d30-a5d6d57841c1.jpg',                    // Reverse Pec Deck
+
+  // Arms
+  ex7:  'https://wger.de/media/exercise-images/81/Biceps-curl-1.png',                                              // Dumbbell Curl
+  ex8:  'https://wger.de/media/exercise-images/1185/c5ca283d-8958-4fd8-9d59-a3f52a3ac66b.jpg',                    // Tricep Pushdown
+  ex40: 'https://wger.de/media/exercise-images/74/Bicep-curls-1.png',                                              // Barbell Curl
+  ex41: 'https://wger.de/media/exercise-images/1567/0a8c155c-a48e-47e8-9df3-e39f025c6cad.png',                    // Hammer Curl
+  ex42: 'https://wger.de/media/exercise-images/50/695ced5c-9961-4076-add2-cb250d01089e.png',                       // Skull Crushers
+  ex43: 'https://wger.de/media/exercise-images/1336/ebf88217-df26-4ef7-94cb-f0c2220c6abe.webp',                   // Overhead Tricep Extension
+  ex44: 'https://wger.de/media/exercise-images/193/Preacher-curl-3-1.png',                                         // Preacher Curl
+  ex45: 'https://wger.de/media/exercise-images/129/Standing-biceps-curl-1.png',                                    // Cable Curl
+  ex46: 'https://wger.de/media/exercise-images/1649/441cc0e5-eca2-4828-8b0a-a0e554abb2ff.jpg',                    // Concentration Curl
+  ex47: 'https://wger.de/media/exercise-images/88/Narrow-grip-bench-press-1.png',                                  // Close Grip Bench Press
+  ex49: 'https://wger.de/media/exercise-images/74/Bicep-curls-1.png',                                              // EZ-Bar Curl
+  ex51: 'https://wger.de/media/exercise-images/51/f1730f56-7aca-4566-8338-3e42b1bee6e1.webp',                     // Wrist Curl
+
+  // Legs
+  ex1:  'https://wger.de/media/exercise-images/1805/f166c599-4c03-42a0-9250-47f82a1f096d.jpg',                    // Barbell Squat
+  ex9:  'https://wger.de/media/exercise-images/371/d2136f96-3a43-4d4c-9944-1919c4ca1ce1.webp',                    // Leg Press
+  ex11: 'https://wger.de/media/exercise-images/1750/c5ff74e1-b494-4df0-a13f-89c630b88ef9.webp',                   // Romanian Deadlift
+  ex15: 'https://wger.de/media/exercise-images/364/b318dde9-f5f2-489f-940a-cd864affb9e3.png',                     // Leg Curl
+  ex52: 'https://wger.de/media/exercise-images/1706/0c5243cc-2539-4005-aee0-d3a8c5d3a32c.jfif',                   // Bulgarian Split Squat
+  ex54: 'https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png',                                    // Front Squat
+  ex55: 'https://wger.de/media/exercise-images/1614/7f3cfae2-e062-4211-9a6b-5a10851ce7f4.jpg',                    // Hip Thrust
+  ex56: 'https://wger.de/media/exercise-images/113/Walking-lunges-1.png',                                          // Walking Lunges
+  ex57: 'https://wger.de/media/exercise-images/203/1c052351-2af0-4227-aeb0-244008e4b0a8.jpeg',                    // Goblet Squat
+  ex59: 'https://wger.de/media/exercise-images/622/9a429bd0-afd3-4ad0-8043-e9beec901c81.jpeg',                    // Standing Calf Raise
+  ex61: 'https://wger.de/media/exercise-images/630/b0f0c7d8-5878-4d9e-b820-21acc013741d.webp',                    // Sumo Deadlift
+
+  // Core
+  ex65: 'https://wger.de/media/exercise-images/125/Leg-raises-2.png',                                              // Hanging Leg Raise
+};
+
+function exerciseIcon(exerciseId, muscle, cssClass = 'ex-icon') {
+  const imgUrl = EXERCISE_IMAGE[exerciseId];
+  if (imgUrl) {
+    return `<span class="${cssClass} ex-icon-img"><img src="${imgUrl}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='${muscleIcon(muscle)}'"></span>`;
+  }
+  return `<span class="${cssClass}">${muscleIcon(muscle)}</span>`;
+}
+
 // ── Bottom Tab Bar ───────────────────────────────────────────
 function tabBar(active) {
   const tabs = [
@@ -788,7 +863,7 @@ function renderExerciseItems(list) {
     .map(
       (ex) => `
     <li class="exercise-item" onclick="Router.go('/exercise/detail', { id: '${ex.id}' })">
-      <span class="ex-icon">${muscleIcon(ex.muscle)}</span>
+      ${exerciseIcon(ex.id, ex.muscle)}
       <div class="ex-info">
         <span class="ex-name">${esc(ex.name)}</span>
         <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
@@ -1124,7 +1199,7 @@ function renderAvailableExercises(exercises, selected) {
     .map(
       (ex) => `
     <li class="exercise-item available-item">
-      <span class="ex-icon">${muscleIcon(ex.muscle)}</span>
+      ${exerciseIcon(ex.id, ex.muscle)}
       <div class="ex-info">
         <span class="ex-name">${esc(ex.name)}</span>
         <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
@@ -1310,7 +1385,7 @@ function renderActiveWorkout(workout) {
         return `
           <div class="workout-exercise-card collapsed" data-ex-idx="${idx}">
             <div class="workout-exercise-header collapsed-header">
-              <span class="ex-icon">${muscleIcon(exercise.muscle)}</span>
+              ${exerciseIcon(exercise.id, exercise.muscle)}
               <div class="ex-info">
                 <span class="workout-exercise-name">${esc(exercise.name)}</span>
                 <span class="ex-meta collapsed-sets">${setCount > 0 ? `${setCount} set${setCount !== 1 ? 's' : ''} — ${setsInfo}` : setsInfo}</span>
@@ -1325,7 +1400,7 @@ function renderActiveWorkout(workout) {
       return `
         <div class="workout-exercise-card active-card" id="activeExerciseCard" data-ex-idx="${idx}">
           <div class="workout-exercise-header">
-            <span class="ex-icon">${muscleIcon(exercise.muscle)}</span>
+            ${exerciseIcon(exercise.id, exercise.muscle)}
             <div class="ex-info">
               <span class="workout-exercise-name">${esc(exercise.name)}</span>
               <span class="ex-meta">${esc(exercise.muscle)} · ${esc(exercise.equipment)}</span>
@@ -1884,7 +1959,7 @@ function showSwapOverlay(currentExercise, workout) {
             .map(
               (ex) => `
             <li class="swap-item" data-swap-id="${ex.id}">
-              <span class="ex-icon">${muscleIcon(ex.muscle)}</span>
+              ${exerciseIcon(ex.id, ex.muscle)}
               <div class="ex-info">
                 <span class="ex-name">${esc(ex.name)}</span>
                 <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
@@ -2340,7 +2415,7 @@ function viewHistory() {
                 <button class="progress-chip" onclick="Router.go('/history/progress', { exerciseId: '${
                   ex.id
                 }' })">
-                  <span class="progress-chip-icon">${muscleIcon(ex.muscle)}</span>
+                  ${exerciseIcon(ex.id, ex.muscle, 'progress-chip-icon')}
                   <span class="progress-chip-name">${esc(ex.name)}</span>
                   <svg class="progress-chip-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
                 </button>
@@ -2617,7 +2692,7 @@ function viewProgress(params) {
     </header>
     <main class="content">
       <div class="progress-header">
-        <span class="progress-ex-icon">${muscleIcon(exercise ? exercise.muscle : 'default')}</span>
+        ${exerciseIcon(exerciseId, exercise ? exercise.muscle : 'default', 'progress-ex-icon')}
         <div>
           <h2 class="progress-ex-name">${esc(exerciseName)}</h2>
           <span class="progress-ex-meta">${allDataPoints.length} workout${
@@ -2933,7 +3008,7 @@ function viewExerciseDetail(params) {
     <main class="content">
       <div class="exercise-detail-card">
         <div class="exercise-detail-header">
-          <span class="progress-ex-icon">${muscleIcon(exercise.muscle)}</span>
+          ${exerciseIcon(exercise.id, exercise.muscle, 'progress-ex-icon')}
           <div>
             <h2 class="progress-ex-name">${esc(exercise.name)}</h2>
             <span class="progress-ex-meta">${esc(exercise.muscle)} · ${esc(
