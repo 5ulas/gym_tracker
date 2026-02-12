@@ -149,6 +149,14 @@ const Store = {
   saveSchedule(s) {
     this._set('il_schedule', s);
   },
+
+  // Rest timer preferences per exercise — { [exerciseId]: seconds }
+  getRestPrefs() {
+    return this._get('il_rest_prefs', {});
+  },
+  saveRestPrefs(prefs) {
+    this._set('il_rest_prefs', prefs);
+  },
 };
 
 // Seed exercises on first launch
@@ -229,6 +237,7 @@ const Router = {
 const $app = () => document.getElementById('app');
 
 function render(html) {
+  hideScrollToTop(); // Cleanup scroll listener when changing views
   $app().innerHTML = html;
 }
 
@@ -458,6 +467,54 @@ function tabBar(active) {
         }')">${t.icon}<span>${t.label}</span></button>`,
     )
     .join('')}</nav>`;
+}
+
+// ── Scroll to top button helper ───────────────────────────────
+let _scrollHandler = null; // Track the scroll handler for cleanup
+
+function bindScrollToTop(mainId) {
+  const main = document.getElementById(mainId);
+  if (!main) return;
+
+  // Create the button if it doesn't exist
+  let btn = document.getElementById('scrollToTopBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'scrollToTopBtn';
+    btn.className = 'scroll-to-top-btn';
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
+    btn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.body.appendChild(btn);
+  }
+
+  // Remove previous scroll handler if any
+  if (_scrollHandler) {
+    window.removeEventListener('scroll', _scrollHandler);
+  }
+
+  // Show/hide based on scroll position
+  _scrollHandler = () => {
+    if (window.scrollY > 400) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  };
+
+  window.addEventListener('scroll', _scrollHandler, { passive: true });
+  _scrollHandler(); // Initial check
+}
+
+// Hide scroll-to-top when navigating away from pages that use it
+function hideScrollToTop() {
+  const btn = document.getElementById('scrollToTopBtn');
+  if (btn) btn.classList.remove('visible');
+  if (_scrollHandler) {
+    window.removeEventListener('scroll', _scrollHandler);
+    _scrollHandler = null;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1124,6 +1181,11 @@ function viewRoutines() {
         <span>New Workout</span>
       </button>
 
+      <button class="btn-quick-workout" onclick="startQuickWorkout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Quick Workout</span>
+      </button>
+
       ${
         routines.length === 0
           ? `
@@ -1187,7 +1249,7 @@ function viewExercises() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
     </header>
-    <main class="content has-tabs">
+    <main class="content has-tabs" id="exercisesMain">
       <div class="search-bar">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="searchInput" placeholder="Search exercises…" autocomplete="off" enterkeyhint="search" />
@@ -1253,6 +1315,9 @@ function viewExercises() {
     activeFilter = chip.dataset.muscle;
     applyFilters();
   });
+
+  // Bind scroll to top button
+  bindScrollToTop('exercisesMain');
 }
 
 function renderExerciseItems(list) {
@@ -1339,6 +1404,20 @@ function viewRoutineEditor(params) {
 
 // ── Routine editor: persistent click handler (managed outside render cycle) ──
 
+// Helper to render selected exercises as compact chips
+function renderSelectedChips(selected) {
+  if (selected.length === 0) return '';
+  return selected.map((ex, i) => {
+    const truncName = ex.name.length > 15 ? ex.name.slice(0, 15) + '…' : ex.name;
+    return `<span class="chip" data-chip-idx="${i}">
+      <span class="chip-name">${esc(truncName)}</span>
+      <button class="chip-remove" data-chip-remove="${i}" aria-label="Remove ${esc(ex.name)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>`;
+  }).join('');
+}
+
 function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   const allExercises = Store.getExercises();
 
@@ -1357,18 +1436,33 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       }
     </header>
     <main class="content" id="routineEditorMain">
-      <div class="form">
-        <label class="form-label">Workout Name
-          <input type="text" id="routineName" class="form-input" placeholder="e.g. Push Day" value="${esc(
-            routineName,
-          )}" autocomplete="off" />
-        </label>
+      <div class="routine-editor-top">
+        <input type="text" id="routineName" class="routine-name-input" placeholder="Workout name" value="${esc(
+          routineName,
+        )}" autocomplete="off" />
+        <div class="selected-chips" id="selectedChips">
+          ${renderSelectedChips(selected)}
+        </div>
+        <div class="search-bar routine-search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="routineSearch" placeholder="Search exercises to add…" autocomplete="off" enterkeyhint="search" />
+        </div>
       </div>
 
-      <section class="routine-section">
-        <h2 class="section-title">Selected Exercises <span class="badge">${
-          selected.length
-        }</span></h2>
+      <section class="routine-section routine-available-section">
+        <ul class="exercise-list" id="availableList">
+          ${renderAvailableExercises(allExercises, selected)}
+        </ul>
+      </section>
+
+      <section class="routine-section routine-selected-section" id="selectedSection">
+        <h2 class="section-title selected-section-title">
+          <span>Selected</span>
+          <span class="badge" id="selectedBadge">${selected.length}</span>
+          <button class="btn-toggle-selected" id="toggleSelectedBtn" aria-label="Toggle selected">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </h2>
         <ul class="exercise-list selected-list" id="selectedList">
           ${
             selected.length === 0
@@ -1395,17 +1489,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
         </ul>
       </section>
 
-      <section class="routine-section">
-        <h2 class="section-title">Add Exercises</h2>
-        <div class="search-bar">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="routineSearch" placeholder="Search exercises…" autocomplete="off" enterkeyhint="search" />
-        </div>
-        <ul class="exercise-list" id="availableList">
-          ${renderAvailableExercises(allExercises, selected)}
-        </ul>
-      </section>
-
     </main>
     <div class="sticky-save-bar">
       <button class="btn-primary btn-full" id="saveRoutineBtn">${
@@ -1418,6 +1501,13 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   function updateLists() {
     const searchInput = document.getElementById('routineSearch');
     const q = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    // Update selected chips
+    const chipsContainer = document.getElementById('selectedChips');
+    if (chipsContainer) {
+      chipsContainer.innerHTML = renderSelectedChips(selected);
+      bindChipRemoveButtons();
+    }
 
     // Update selected list
     const selectedList = document.getElementById('selectedList');
@@ -1439,7 +1529,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
         `).join('');
 
     // Update badge count
-    const badge = document.querySelector('.section-title .badge');
+    const badge = document.getElementById('selectedBadge');
     if (badge) badge.textContent = selected.length;
 
     // Update available list (apply current search filter)
@@ -1456,6 +1546,18 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     // Re-bind item buttons (not drag — container listeners persist)
     bindAddButtons();
     bindRemoveButtons();
+  }
+
+  // ── Bind chip remove buttons ─────────────────────────────────
+  function bindChipRemoveButtons() {
+    document.querySelectorAll('.chip-remove').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.chipRemove);
+        selected.splice(idx, 1);
+        updateLists();
+      });
+    });
   }
 
   // ── Bind add-exercise buttons ──────────────────────────────
@@ -1598,17 +1700,25 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   // ── Delete routine ─────────────────────────────────────────
   if (isEdit) {
     document.getElementById('deleteRoutineBtn').addEventListener('click', () => {
-      if (confirm('Delete this workout?')) {
-        const routines = Store.getRoutines().filter((r) => r.id !== routineId);
-        Store.saveRoutines(routines);
-        Router.go('/');
-      }
+      showConfirmModal({
+        icon: 'warning',
+        title: 'Delete Workout',
+        message: 'Are you sure you want to delete this workout template?',
+        confirmText: 'Delete',
+        confirmDanger: true,
+        onConfirm: () => {
+          const routines = Store.getRoutines().filter((r) => r.id !== routineId);
+          Store.saveRoutines(routines);
+          Router.go('/');
+        },
+      });
     });
   }
 
   // ── Initial button bindings ────────────────────────────────
   bindAddButtons();
   bindRemoveButtons();
+  bindChipRemoveButtons();
   bindDragReorder();
 
   // ── Search ─────────────────────────────────────────────────
@@ -1630,23 +1740,19 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     bindAddButtons();
   });
 
-  // Scroll search bar into view on focus, pinning it just below the header
-  routineSearchInput.addEventListener('focus', () => {
-    setTimeout(() => {
-      const header = document.querySelector('.header');
-      const headerH = header ? header.offsetHeight : 0;
-      const barRect = routineSearchInput.closest('.search-bar').getBoundingClientRect();
-      const scrollY = window.pageYOffset + barRect.top - headerH - 4;
-      window.scrollTo({ top: Math.max(0, scrollY), behavior: 'smooth' });
-    }, 300);
-  });
-
   // Dismiss keyboard on Enter/Search key
   routineSearchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       routineSearchInput.blur();
     }
+  });
+
+  // ── Toggle selected section collapse ──────────────────────
+  const toggleBtn = document.getElementById('toggleSelectedBtn');
+  const selectedSection = document.getElementById('selectedSection');
+  toggleBtn.addEventListener('click', () => {
+    selectedSection.classList.toggle('collapsed');
   });
 }
 
@@ -1694,27 +1800,121 @@ function showFormError(anchorEl, message) {
 // ── Start a workout from a routine ───────────────────────────
 function startWorkout(routineId) {
   const existing = Store.getActiveWorkout();
-  if (existing) {
-    if (!confirm('You have a workout in progress. Discard it and start a new one?')) return;
-  }
 
-  const routine = Store.getRoutines().find((r) => r.id === routineId);
-  if (!routine) return;
+  const doStart = () => {
+    const routine = Store.getRoutines().find((r) => r.id === routineId);
+    if (!routine) return;
 
-  const workout = {
-    id: uid(),
-    routineId: routine.id,
-    routineName: routine.name,
-    startedAt: Date.now(),
-    currentExerciseIdx: 0,
-    exercises: routine.exercises.map((ex) => ({
-      ...ex,
-      sets: [],
-    })),
+    const workout = {
+      id: uid(),
+      routineId: routine.id,
+      routineName: routine.name,
+      startedAt: Date.now(),
+      currentExerciseIdx: 0,
+      exercises: routine.exercises.map((ex) => ({
+        ...ex,
+        sets: [],
+      })),
+    };
+
+    Store.saveActiveWorkout(workout);
+    Router.go('/workout/active');
   };
 
-  Store.saveActiveWorkout(workout);
-  Router.go('/workout/active');
+  if (existing) {
+    showConfirmModal({
+      icon: 'warning',
+      title: 'Workout in Progress',
+      message: 'You have a workout in progress. Discard it and start a new one?',
+      confirmText: 'Discard & Start',
+      confirmDanger: true,
+      onConfirm: doStart,
+    });
+  } else {
+    doStart();
+  }
+}
+
+// ── Start a Quick Workout (empty, add exercises on the fly) ───
+function startQuickWorkout() {
+  const existing = Store.getActiveWorkout();
+
+  const doStart = () => {
+    const workout = {
+      id: uid(),
+      routineId: null,
+      routineName: 'Quick Workout',
+      startedAt: Date.now(),
+      currentExerciseIdx: 0,
+      isQuickWorkout: true,
+      exercises: [],
+    };
+
+    Store.saveActiveWorkout(workout);
+    Router.go('/workout/active');
+  };
+
+  if (existing) {
+    showConfirmModal({
+      icon: 'warning',
+      title: 'Workout in Progress',
+      message: 'You have a workout in progress. Discard it and start a new one?',
+      confirmText: 'Discard & Start',
+      confirmDanger: true,
+      onConfirm: doStart,
+    });
+  } else {
+    doStart();
+  }
+}
+
+// ── Undo Set Deletion State ───────────────────────────────────
+let _undoTimeout = null;
+let _undoToastEl = null;
+
+function showUndoToast(message, undoCallback, duration = 5000) {
+  // Clear any existing undo toast
+  hideUndoToast();
+
+  const toast = document.createElement('div');
+  toast.className = 'undo-toast';
+  toast.innerHTML = `
+    <span class="undo-message">${esc(message)}</span>
+    <button class="btn-undo">Undo</button>
+  `;
+
+  document.body.appendChild(toast);
+  _undoToastEl = toast;
+
+  // Animate in
+  requestAnimationFrame(() => toast.classList.add('visible'));
+
+  // Undo button handler
+  toast.querySelector('.btn-undo').addEventListener('click', () => {
+    hideUndoToast();
+    if (undoCallback) undoCallback();
+  });
+
+  // Auto-hide after duration
+  _undoTimeout = setTimeout(() => {
+    hideUndoToast();
+  }, duration);
+}
+
+function hideUndoToast() {
+  if (_undoTimeout) {
+    clearTimeout(_undoTimeout);
+    _undoTimeout = null;
+  }
+  if (_undoToastEl) {
+    _undoToastEl.classList.remove('visible');
+    setTimeout(() => {
+      if (_undoToastEl && _undoToastEl.parentNode) {
+        _undoToastEl.remove();
+      }
+      _undoToastEl = null;
+    }, 300);
+  }
 }
 
 // ── Rest Timer State ─────────────────────────────────────────
@@ -1722,6 +1922,7 @@ let _restTimer = null;
 let _restRemaining = 0;
 let _restTotal = 0;
 let _restCallback = null;
+let _restExerciseId = null; // Track which exercise this rest is for
 
 function startRestTimer(seconds, onTick, onDone) {
   clearRestTimer();
@@ -1748,6 +1949,7 @@ function clearRestTimer() {
   }
   _restRemaining = 0;
   _restTotal = 0;
+  _restExerciseId = null;
 }
 
 function isRestTimerRunning() {
@@ -2034,10 +2236,10 @@ function renderActiveWorkout(workout) {
 
     <main class="content workout-content">
       <!-- Progress Bar -->
-      <div class="workout-progress">
+      <div class="workout-progress" ${totalExercises === 0 ? 'style="display:none"' : ''}>
         <div class="workout-progress-bar">
           <div class="workout-progress-fill" style="width: ${
-            (completedExercises / totalExercises) * 100
+            totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0
           }%"></div>
         </div>
         <span class="workout-progress-text">${completedExercises} / ${totalExercises}</span>
@@ -2045,8 +2247,24 @@ function renderActiveWorkout(workout) {
 
       <!-- All Exercise Cards -->
       <div class="workout-exercises-list" id="workoutExercisesList">
-        ${exerciseCardsHtml}
+        ${totalExercises === 0 ? `
+          <div class="quick-workout-empty">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <p class="empty-title">Quick Workout</p>
+            <p class="empty-sub">Add exercises as you go</p>
+          </div>
+        ` : exerciseCardsHtml}
       </div>
+
+      <!-- Add Exercise Button (for quick workouts) -->
+      ${workout.isQuickWorkout ? `
+        <button class="btn-add-exercise-workout" id="btnAddExerciseWorkout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Exercise
+        </button>
+      ` : ''}
 
       <!-- Finish Workout Button -->
       <div class="workout-finish-section">
@@ -2122,6 +2340,7 @@ function renderActiveWorkout(workout) {
       }
 
       const w = Store.getActiveWorkout();
+      const currentExercise = w.exercises[w.currentExerciseIdx];
       w.exercises[w.currentExerciseIdx].sets.push({
         weight,
         reps,
@@ -2134,19 +2353,41 @@ function renderActiveWorkout(workout) {
       renderActiveWorkout(w);
 
       // Start rest timer (after re-render so DOM exists)
-      showRestTimer(getRestDuration(selectedDifficulty), w);
+      // Use saved preference for this exercise, or default based on difficulty
+      const restPrefs = Store.getRestPrefs();
+      const savedRest = restPrefs[currentExercise.id];
+      const restDuration = savedRest || getRestDuration(selectedDifficulty);
+      showRestTimer(restDuration, w, currentExercise.id);
     });
   }
 
-  // Delete set buttons
+  // Delete set buttons (with undo)
   document.querySelectorAll('.btn-delete-set').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation(); // Don't trigger edit mode
       const setIdx = parseInt(btn.dataset.setidx);
       const w = Store.getActiveWorkout();
-      w.exercises[w.currentExerciseIdx].sets.splice(setIdx, 1);
+      const exIdx = w.currentExerciseIdx;
+
+      // Store deleted set for undo
+      const deletedSet = { ...w.exercises[exIdx].sets[setIdx] };
+      const deletedFromExIdx = exIdx;
+      const deletedAtIdx = setIdx;
+
+      // Delete the set
+      w.exercises[exIdx].sets.splice(setIdx, 1);
       Store.saveActiveWorkout(w);
       renderActiveWorkout(w);
+
+      // Show undo toast
+      showUndoToast('Set deleted', () => {
+        const w2 = Store.getActiveWorkout();
+        if (!w2) return;
+        // Restore the set at original position
+        w2.exercises[deletedFromExIdx].sets.splice(deletedAtIdx, 0, deletedSet);
+        Store.saveActiveWorkout(w2);
+        renderActiveWorkout(w2);
+      });
     });
   });
 
@@ -2275,6 +2516,14 @@ function renderActiveWorkout(workout) {
     setTimeout(() => {
       activeCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
+  }
+
+  // Add Exercise button (quick workout)
+  const btnAddExercise = document.getElementById('btnAddExerciseWorkout');
+  if (btnAddExercise) {
+    btnAddExercise.addEventListener('click', () => {
+      showAddExerciseOverlay(workout);
+    });
   }
 }
 
@@ -2493,10 +2742,13 @@ function getRestDuration(difficulty) {
 }
 
 // ── Show rest timer after logging a set ──────────────────────
-function showRestTimer(seconds, workout) {
+function showRestTimer(seconds, workout, exerciseId) {
   const container = document.getElementById('restTimerContainer');
 
   if (!container) return;
+
+  // Track which exercise this rest is for
+  _restExerciseId = exerciseId;
 
   container.style.display = 'flex';
   const circumference = 2 * Math.PI * 52; // r=52
@@ -2517,6 +2769,8 @@ function showRestTimer(seconds, workout) {
       if (c) c.style.display = 'none';
       // Vibrate on timer end if supported
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      // Clear exercise tracking
+      _restExerciseId = null;
       // Re-render to update set number
       const w = Store.getActiveWorkout();
       if (w) renderActiveWorkout(w);
@@ -2528,6 +2782,13 @@ function adjustRestTimer(delta) {
   if (!isRestTimerRunning()) return;
   _restRemaining = Math.max(0, _restRemaining + delta);
   _restTotal = Math.max(_restTotal, _restRemaining);
+
+  // Save this preference for the exercise
+  if (_restExerciseId && _restTotal > 0) {
+    const prefs = Store.getRestPrefs();
+    prefs[_restExerciseId] = _restTotal;
+    Store.saveRestPrefs(prefs);
+  }
 }
 
 function skipRestTimer() {
@@ -2620,6 +2881,128 @@ function showSwapOverlay(currentExercise, workout) {
   });
 }
 
+// ── Add Exercise Overlay (for Quick Workouts) ─────────────────
+function showAddExerciseOverlay(workout) {
+  const allExercises = Store.getExercises();
+  const existingIds = workout.exercises.map((ex) => ex.id);
+
+  // Create overlay element
+  const overlay = document.createElement('div');
+  overlay.className = 'swap-overlay add-exercise-overlay';
+
+  let searchQuery = '';
+
+  const renderExerciseList = (query) => {
+    let filtered = allExercises.filter((ex) => !existingIds.includes(ex.id));
+    if (query) {
+      const q = query.toLowerCase();
+      filtered = filtered.filter(
+        (ex) =>
+          ex.name.toLowerCase().includes(q) ||
+          ex.muscle.toLowerCase().includes(q) ||
+          ex.equipment.toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      return '<p class="swap-empty">No exercises found</p>';
+    }
+
+    return `
+      <ul class="swap-list add-exercise-list">
+        ${filtered
+          .map(
+            (ex) => `
+          <li class="swap-item add-exercise-item" data-add-id="${ex.id}">
+            ${exerciseIcon(ex.id, ex.muscle)}
+            <div class="ex-info">
+              <span class="ex-name">${esc(ex.name)}</span>
+              <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
+            </div>
+            <span class="swap-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+          </li>
+        `
+          )
+          .join('')}
+      </ul>
+    `;
+  };
+
+  overlay.innerHTML = `
+    <div class="swap-panel add-exercise-panel">
+      <div class="swap-header">
+        <h2>Add Exercise</h2>
+        <button class="btn-icon swap-close-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="search-bar add-exercise-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="addExerciseSearch" placeholder="Search exercises…" autocomplete="off" enterkeyhint="search" />
+      </div>
+      <div id="addExerciseListContainer">
+        ${renderExerciseList('')}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Animate in
+  requestAnimationFrame(() => overlay.classList.add('active'));
+
+  // Close handler
+  const close = () => {
+    overlay.classList.remove('active');
+    setTimeout(() => overlay.remove(), 300);
+  };
+
+  overlay.querySelector('.swap-close-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+
+  // Search functionality
+  const searchInput = overlay.querySelector('#addExerciseSearch');
+  const listContainer = overlay.querySelector('#addExerciseListContainer');
+
+  searchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value.trim();
+    listContainer.innerHTML = renderExerciseList(searchQuery);
+    bindAddHandlers();
+  });
+
+  // Add exercise handlers
+  const bindAddHandlers = () => {
+    overlay.querySelectorAll('.add-exercise-item').forEach((item) => {
+      item.addEventListener('click', () => {
+        const exId = item.dataset.addId;
+        const ex = allExercises.find((e) => e.id === exId);
+        if (!ex) return;
+
+        const w = Store.getActiveWorkout();
+        if (!w) return;
+
+        // Add exercise to workout
+        w.exercises.push({
+          ...ex,
+          sets: [],
+          notes: '',
+        });
+        // Set as current exercise
+        w.currentExerciseIdx = w.exercises.length - 1;
+        existingIds.push(ex.id);
+        Store.saveActiveWorkout(w);
+        close();
+        renderActiveWorkout(w);
+      });
+    });
+  };
+
+  bindAddHandlers();
+  searchInput.focus();
+}
+
 // ── Exercise navigation ──────────────────────────────────────
 function navigateExercise(direction) {
   clearRestTimer();
@@ -2640,11 +3023,18 @@ function handleWorkoutBack() {
 
 // ── Cancel active workout ────────────────────────────────────
 function handleCancelWorkout() {
-  if (confirm('Cancel this workout? All logged sets will be lost.')) {
-    clearRestTimer();
-    Store.clearActiveWorkout();
-    Router.go('/');
-  }
+  showConfirmModal({
+    icon: 'warning',
+    title: 'Cancel Workout',
+    message: 'All logged sets will be lost. Are you sure?',
+    confirmText: 'Cancel Workout',
+    confirmDanger: true,
+    onConfirm: () => {
+      clearRestTimer();
+      Store.clearActiveWorkout();
+      Router.go('/');
+    },
+  });
 }
 
 // ── Finish workout → save to history ─────────────────────────
@@ -2692,6 +3082,8 @@ function finishWorkout() {
 function doFinishWorkout(w) {
   clearRestTimer();
 
+  const isQuickWorkout = w.isQuickWorkout === true;
+
   const completedWorkout = {
     id: w.id,
     routineId: w.routineId,
@@ -2731,7 +3123,81 @@ function doFinishWorkout(w) {
     }
   }
 
-  Router.go('/workout/summary', { workoutId: completedWorkout.id });
+  // For quick workouts, offer to save as routine
+  if (isQuickWorkout && w.exercises.length > 0) {
+    showSaveAsRoutinePrompt(completedWorkout);
+  } else {
+    Router.go('/workout/summary', { workoutId: completedWorkout.id });
+  }
+}
+
+// ── Save Quick Workout as Routine prompt ──────────────────────
+function showSaveAsRoutinePrompt(completedWorkout) {
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-modal-overlay';
+  overlay.innerHTML = `
+    <div class="confirm-modal save-routine-modal">
+      <div class="confirm-modal-icon save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </div>
+      <h3 class="confirm-modal-title">Save as Routine?</h3>
+      <p class="confirm-modal-message">Would you like to save this workout as a reusable routine?</p>
+      <input type="text" id="saveRoutineNameInput" class="save-routine-input" placeholder="Routine name" value="${esc(completedWorkout.routineName === 'Quick Workout' ? '' : completedWorkout.routineName)}" autocomplete="off" />
+      <div class="confirm-modal-actions">
+        <button class="confirm-modal-btn cancel">Skip</button>
+        <button class="confirm-modal-btn confirm" id="btnSaveAsRoutine">Save</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+
+  const nameInput = overlay.querySelector('#saveRoutineNameInput');
+  nameInput.focus();
+  nameInput.select();
+
+  const close = () => {
+    overlay.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 200);
+  };
+
+  const goToSummary = () => {
+    close();
+    Router.go('/workout/summary', { workoutId: completedWorkout.id });
+  };
+
+  overlay.querySelector('.confirm-modal-btn.cancel').addEventListener('click', goToSummary);
+
+  overlay.querySelector('#btnSaveAsRoutine').addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    if (!name) {
+      shakeElement(nameInput);
+      return;
+    }
+
+    // Create routine from workout exercises
+    const routines = Store.getRoutines();
+    routines.push({
+      id: uid(),
+      name,
+      exercises: completedWorkout.exercises.map((ex) => ({
+        id: ex.id,
+        name: ex.name,
+        muscle: ex.muscle,
+        equipment: ex.equipment,
+      })),
+    });
+    Store.saveRoutines(routines);
+    goToSummary();
+  });
+
+  // Enter key to save
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      overlay.querySelector('#btnSaveAsRoutine').click();
+    }
+  });
 }
 
 // ── Custom confirmation modal ─────────────────────────────────
@@ -2961,9 +3427,14 @@ function timeAgo(ts) {
 // ══════════════════════════════════════════════════════════════
 // VIEW: Workout History
 // ══════════════════════════════════════════════════════════════
+// Track how many workouts to show in history (pagination)
+let _historyLimit = 20;
+
 function viewHistory() {
-  const workouts = Store.getWorkouts().slice().reverse(); // newest first
+  const allWorkouts = Store.getWorkouts().slice().reverse(); // newest first
   const exercises = Store.getExercises();
+  const hasMore = allWorkouts.length > _historyLimit;
+  const workouts = allWorkouts.slice(0, _historyLimit);
 
   // Group workouts by month
   const grouped = {};
@@ -2977,7 +3448,7 @@ function viewHistory() {
   // Collect exercises that have history for progress links
   const exercisesWithHistory = [];
   const seen = new Set();
-  workouts.forEach((w) => {
+  allWorkouts.forEach((w) => {
     w.exercises.forEach((ex) => {
       if (ex.sets.length > 0 && !seen.has(ex.id)) {
         seen.add(ex.id);
@@ -2994,9 +3465,9 @@ function viewHistory() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       </button>
     </header>
-    <main class="content has-tabs">
+    <main class="content has-tabs" id="historyMain">
       ${
-        workouts.length === 0
+        allWorkouts.length === 0
           ? `
         <div class="empty-state">
           <div class="empty-icon">
@@ -3090,12 +3561,30 @@ function viewHistory() {
           `,
             )
             .join('')}
+          ${hasMore ? `
+            <button class="btn-show-more" id="showMoreBtn">
+              <span>Show More</span>
+              <span class="show-more-count">${allWorkouts.length - _historyLimit} more workouts</span>
+            </button>
+          ` : ''}
         </section>
       `
       }
     </main>
     ${tabBar('/history')}
   `);
+
+  // Bind show more button
+  const showMoreBtn = document.getElementById('showMoreBtn');
+  if (showMoreBtn) {
+    showMoreBtn.addEventListener('click', () => {
+      _historyLimit += 20;
+      viewHistory();
+    });
+  }
+
+  // Bind scroll to top button
+  bindScrollToTop('historyMain');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3216,11 +3705,18 @@ function viewWorkoutDetail(params) {
 
   // Delete workout
   document.getElementById('deleteWorkoutBtn').addEventListener('click', () => {
-    if (confirm('Delete this workout from history?')) {
-      const workouts = Store.getWorkouts().filter((w) => w.id !== params.workoutId);
-      Store.saveWorkouts(workouts);
-      Router.go('/history');
-    }
+    showConfirmModal({
+      icon: 'warning',
+      title: 'Delete Workout',
+      message: 'Delete this workout from history? This cannot be undone.',
+      confirmText: 'Delete',
+      confirmDanger: true,
+      onConfirm: () => {
+        const workouts = Store.getWorkouts().filter((w) => w.id !== params.workoutId);
+        Store.saveWorkouts(workouts);
+        Router.go('/history');
+      },
+    });
   });
 
   // Workout-level note auto-save
@@ -3700,24 +4196,41 @@ function viewExerciseDetail(params) {
 
   // Delete exercise
   document.getElementById('deleteExBtn').addEventListener('click', () => {
+    const doDelete = () => {
+      if (usedInRoutines.length > 0) {
+        // Remove from routines
+        const allRoutines = Store.getRoutines();
+        allRoutines.forEach((r) => {
+          r.exercises = r.exercises.filter((ex) => ex.id !== exercise.id);
+        });
+        Store.saveRoutines(allRoutines);
+      }
+      const updatedExercises = Store.getExercises().filter((e) => e.id !== exercise.id);
+      Store.saveExercises(updatedExercises);
+      Router.go('/exercises');
+    };
+
     if (usedInRoutines.length > 0) {
-      const names = usedInRoutines.map((r) => r.name).join(', ');
-      if (
-        !confirm(`This exercise is used in: ${names}.\n\nDelete it and remove from those workouts?`)
-      )
-        return;
-      // Remove from routines
-      const allRoutines = Store.getRoutines();
-      allRoutines.forEach((r) => {
-        r.exercises = r.exercises.filter((ex) => ex.id !== exercise.id);
+      const names = usedInRoutines.map((r) => r.name);
+      showConfirmModal({
+        icon: 'warning',
+        title: 'Exercise In Use',
+        message: 'This exercise is used in the following workouts:',
+        list: names,
+        confirmText: 'Delete Anyway',
+        confirmDanger: true,
+        onConfirm: doDelete,
       });
-      Store.saveRoutines(allRoutines);
     } else {
-      if (!confirm('Delete this exercise?')) return;
+      showConfirmModal({
+        icon: 'warning',
+        title: 'Delete Exercise',
+        message: 'Are you sure you want to delete this exercise?',
+        confirmText: 'Delete',
+        confirmDanger: true,
+        onConfirm: doDelete,
+      });
     }
-    const updatedExercises = Store.getExercises().filter((e) => e.id !== exercise.id);
-    Store.saveExercises(updatedExercises);
-    Router.go('/exercises');
   });
 }
 
@@ -3993,19 +4506,24 @@ function importData() {
         // Count what's being imported
         const counts = `${data.exercises.length} exercises, ${data.routines.length} workouts, ${data.workouts.length} logs`;
 
-        if (!confirm(`Import this backup?\n\n${counts}\n\nThis will REPLACE all your current data. Make sure you've exported a backup first.`)) {
-          return;
-        }
+        showConfirmModal({
+          icon: 'warning',
+          title: 'Import Backup',
+          message: `This will REPLACE all your current data with: ${counts}. Make sure you've exported a backup first.`,
+          confirmText: 'Import',
+          confirmDanger: true,
+          onConfirm: () => {
+            Store.saveExercises(data.exercises);
+            Store.saveRoutines(data.routines);
+            Store.saveWorkouts(data.workouts);
+            if (data.schedule) Store.saveSchedule(data.schedule);
 
-        Store.saveExercises(data.exercises);
-        Store.saveRoutines(data.routines);
-        Store.saveWorkouts(data.workouts);
-        if (data.schedule) Store.saveSchedule(data.schedule);
+            showToast('Data imported successfully');
 
-        showToast('Data imported successfully');
-
-        // Refresh the view
-        setTimeout(() => Router.go('/settings'), 300);
+            // Refresh the view
+            setTimeout(() => Router.go('/settings'), 300);
+          },
+        });
       } catch (err) {
         showToast('Failed to read file — invalid JSON', true);
       }
@@ -4020,24 +4538,36 @@ function clearAllData() {
   const workoutCount = Store.getWorkouts().length;
   const routineCount = Store.getRoutines().length;
 
-  if (!confirm(`Delete ALL data?\n\n${routineCount} workouts, ${workoutCount} logs\n\nThis cannot be undone!`)) {
-    return;
-  }
-  if (!confirm('Are you absolutely sure? All workout history will be permanently deleted.')) {
-    return;
-  }
+  showConfirmModal({
+    icon: 'warning',
+    title: 'Delete All Data',
+    message: `This will permanently delete ${routineCount} workout templates and ${workoutCount} workout logs. This cannot be undone!`,
+    confirmText: 'Delete Everything',
+    confirmDanger: true,
+    onConfirm: () => {
+      // Second confirmation
+      showConfirmModal({
+        icon: 'warning',
+        title: 'Are You Sure?',
+        message: 'All workout history will be permanently deleted. This is your last chance to cancel.',
+        confirmText: 'Yes, Delete All',
+        confirmDanger: true,
+        onConfirm: () => {
+          localStorage.removeItem('il_exercises');
+          localStorage.removeItem('il_routines');
+          localStorage.removeItem('il_workouts');
+          localStorage.removeItem('il_active_workout');
+          localStorage.removeItem('il_schedule');
 
-  localStorage.removeItem('il_exercises');
-  localStorage.removeItem('il_routines');
-  localStorage.removeItem('il_workouts');
-  localStorage.removeItem('il_active_workout');
-  localStorage.removeItem('il_schedule');
+          // Re-seed default exercises
+          Store.saveExercises(DEFAULT_EXERCISES);
 
-  // Re-seed default exercises
-  Store.saveExercises(DEFAULT_EXERCISES);
-
-  showToast('All data cleared');
-  setTimeout(() => Router.go('/'), 300);
+          showToast('All data cleared');
+          setTimeout(() => Router.go('/'), 300);
+        },
+      });
+    },
+  });
 }
 
 // ── Toast notification ────────────────────────────────────────

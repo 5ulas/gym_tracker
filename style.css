@@ -351,7 +351,7 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 .btn-new-routine:active {
   background: var(--primary-dim);
@@ -361,6 +361,35 @@ body {
   width: 20px;
   height: 20px;
 }
+
+/* ── Quick Workout Button ────────────────────────────────── */
+.btn-quick-workout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--primary), #5856d6);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+.btn-quick-workout:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+.btn-quick-workout svg {
+  width: 20px;
+  height: 20px;
+}
+
 .home-section-title {
   margin-bottom: 12px;
 }
@@ -543,14 +572,105 @@ select.form-input {
 #routineEditorMain {
   padding-bottom: calc(var(--safe-bottom) + 80px);
 }
-#routineEditorMain .search-bar {
-  top: -1px;
-  z-index: 10;
+
+/* ── Routine Editor Top Area (name + search) ───────────────── */
+.routine-editor-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  padding-bottom: 8px;
+  margin: 0 -16px;
+  padding: 0 16px 8px;
+}
+.routine-name-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 600;
+  outline: none;
+  margin-bottom: 10px;
+  transition: background 0.2s;
+}
+.routine-name-input::placeholder {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.routine-name-input:focus {
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 2px var(--primary-dim);
+}
+.routine-search-bar {
+  position: relative;
+  margin-bottom: 0;
+}
+
+/* ── Selected Chips (inline above search) ────────────────── */
+.selected-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 10px;
+  scrollbar-width: none;
+}
+.selected-chips::-webkit-scrollbar {
+  display: none;
+}
+.selected-chips:empty {
+  display: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 12px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chip-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chip-remove {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.chip-remove:active {
+  background: rgba(255, 255, 255, 0.4);
+}
+.chip-remove svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* ── Routine Editor: Selected / Available ─────────────────── */
 .routine-section {
-  margin-top: 24px;
+  margin-top: 16px;
+}
+.routine-available-section {
+  margin-top: 8px;
 }
 
 .section-title {
@@ -563,6 +683,42 @@ select.form-input {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ── Selected Section: collapsible ───────────────────────── */
+.routine-selected-section {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.selected-section-title {
+  cursor: pointer;
+  user-select: none;
+}
+.selected-section-title span:first-child {
+  flex: 1;
+}
+.btn-toggle-selected {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+.btn-toggle-selected svg {
+  width: 18px;
+  height: 18px;
+}
+.routine-selected-section.collapsed .btn-toggle-selected {
+  transform: rotate(-90deg);
+}
+.routine-selected-section.collapsed .selected-list {
+  display: none;
 }
 
 .badge {
@@ -627,27 +783,27 @@ select.form-input {
 }
 
 .btn-add-ex {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: var(--primary-dim);
+  background: var(--primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: #fff;
   cursor: pointer;
   flex-shrink: 0;
   transition: transform 0.15s, background 0.15s;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
 }
 .btn-add-ex:active {
-  transform: scale(0.85);
-  background: var(--primary);
-  color: #fff;
+  transform: scale(0.9);
+  background: #0065d1;
 }
 .btn-add-ex svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 /* ── Animations ───────────────────────────────────────────── */
@@ -935,6 +1091,108 @@ select.form-input {
   border-color: var(--success);
   color: var(--text);
   transform: scale(0.98);
+}
+
+/* ── Quick Workout: Add Exercise Button ───────────────────── */
+.btn-add-exercise-workout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary-dim);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-add-exercise-workout:active {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-add-exercise-workout svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Quick Workout: Empty State ───────────────────────────── */
+.quick-workout-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.quick-workout-empty .empty-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--primary-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quick-workout-empty .empty-icon svg {
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+}
+.quick-workout-empty .empty-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.quick-workout-empty .empty-sub {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ── Add Exercise Overlay (extends swap-overlay) ──────────── */
+.add-exercise-overlay .add-exercise-panel {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+.add-exercise-search {
+  margin: 0 0 12px;
+  flex-shrink: 0;
+}
+#addExerciseListContainer {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.add-exercise-list {
+  max-height: none;
+}
+.add-exercise-item .swap-arrow svg {
+  color: var(--success);
+}
+
+/* ── Save as Routine Modal ───────────────────────────────── */
+.save-routine-modal .confirm-modal-icon.save {
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--success);
+}
+.save-routine-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 1rem;
+  margin-bottom: 16px;
+  outline: none;
+}
+.save-routine-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
 }
 
 /* ── Inline Notes (inside active card) ───────────────────── */
@@ -3549,4 +3807,119 @@ select.form-input {
   font-size: 0.82rem;
   padding: 20px;
   text-align: center;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Show More Button (History pagination)                          */
+/* ══════════════════════════════════════════════════════════════ */
+.btn-show-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 16px 20px;
+  margin-top: 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.btn-show-more:active {
+  background: var(--bg-elevated);
+  border-color: var(--primary);
+}
+.show-more-count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Scroll to Top Button                                           */
+/* ══════════════════════════════════════════════════════════════ */
+.scroll-to-top-btn {
+  position: fixed;
+  bottom: calc(80px + var(--safe-bottom));
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.15s;
+  z-index: 100;
+}
+.scroll-to-top-btn.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+.scroll-to-top-btn:active {
+  background: var(--bg-elevated);
+  transform: scale(0.95) translateY(0);
+}
+.scroll-to-top-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Undo Toast                                                      */
+/* ══════════════════════════════════════════════════════════════ */
+.undo-toast {
+  position: fixed;
+  bottom: calc(90px + var(--safe-bottom));
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #333;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.undo-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.undo-message {
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+.btn-undo {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.btn-undo:active {
+  background: #0065d1;
+  transform: scale(0.95);
 }
