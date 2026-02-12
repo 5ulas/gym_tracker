@@ -1440,10 +1440,10 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       }
     </header>
     <main class="content" id="routineEditorMain">
-      <input type="text" id="routineName" class="routine-name-input" placeholder="Workout name" value="${esc(
-        routineName,
-      )}" autocomplete="off" />
       <div class="routine-editor-top">
+        <input type="text" id="routineName" class="routine-name-input" placeholder="Workout name" value="${esc(
+          routineName,
+        )}" autocomplete="off" />
         <div class="selected-chips" id="selectedChips">
           ${renderSelectedChips(selected)}
         </div>
