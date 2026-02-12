@@ -581,7 +581,9 @@ select.form-input {
   background: var(--bg);
   padding-bottom: 8px;
   margin: 0 -16px;
-  padding: 0 16px 8px;
+  padding: 8px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .routine-name-input {
   width: 100%;
@@ -683,103 +685,6 @@ select.form-input {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-/* ── Selected Section: collapsible ───────────────────────── */
-.routine-selected-section {
-  margin-top: 24px;
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
-}
-.selected-section-title {
-  cursor: pointer;
-  user-select: none;
-}
-.selected-section-title span:first-child {
-  flex: 1;
-}
-.btn-toggle-selected {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
-}
-.btn-toggle-selected svg {
-  width: 18px;
-  height: 18px;
-}
-.routine-selected-section.collapsed .btn-toggle-selected {
-  transform: rotate(-90deg);
-}
-.routine-selected-section.collapsed .selected-list {
-  display: none;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 11px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.selected-list .exercise-item {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-}
-
-.drag-handle {
-  width: 24px;
-  height: 24px;
-  color: var(--text-dim);
-  flex-shrink: 0;
-  cursor: grab;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.drag-handle svg {
-  width: 18px;
-  height: 18px;
-}
-
-.dragging {
-  opacity: 0.5;
-  background: var(--primary-dim) !important;
-}
-
-.btn-remove {
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: rgba(255, 69, 58, 0.12);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--danger);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: transform 0.15s, background 0.15s;
-}
-.btn-remove:active {
-  transform: scale(0.85);
-}
-.btn-remove svg {
-  width: 16px;
-  height: 16px;
 }
 
 .btn-add-ex {
@@ -3447,7 +3352,7 @@ select.form-input {
   position: relative;
   background: var(--bg-card);
   border-radius: 20px 20px 0 0;
-  padding: 12px 20px calc(20px + var(--safe-bottom));
+  padding: 8px 16px calc(16px + var(--safe-bottom));
   max-height: 75vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -3462,14 +3367,14 @@ select.form-input {
   height: 4px;
   background: var(--text-dim);
   border-radius: 2px;
-  margin: 0 auto 16px;
+  margin: 0 auto 10px;
   opacity: 0.5;
 }
 .day-action-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 .day-action-date {
   font-size: 1.1rem;
@@ -3489,14 +3394,14 @@ select.form-input {
 .day-action-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 .day-action-current {
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--bg-elevated);
   border-radius: var(--radius-sm);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .day-action-current-label {
   display: block;
@@ -3515,13 +3420,13 @@ select.form-input {
 .day-action-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 11px 14px;
   border: none;
   background: var(--bg-elevated);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
@@ -3562,10 +3467,26 @@ select.form-input {
 .day-action-btn.danger svg {
   color: var(--danger);
 }
+.day-action-cancel {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.day-action-cancel:active {
+  background: var(--bg-elevated);
+}
 
 /* ── Routine picker ──────────────────────────────────────────── */
 .day-action-picker {
-  margin-top: 12px;
+  margin-top: 8px;
   animation: slideDown 0.2s ease;
 }
 @keyframes slideDown {
@@ -3590,7 +3511,7 @@ select.form-input {
   gap: 6px;
 }
 .day-action-routine-item {
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--bg-elevated);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -3847,13 +3768,13 @@ select.form-input {
   position: fixed;
   bottom: calc(80px + var(--safe-bottom));
   right: 16px;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 50%;
-  background: var(--bg-card);
-  color: var(--text-muted);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3870,12 +3791,12 @@ select.form-input {
   pointer-events: auto;
 }
 .scroll-to-top-btn:active {
-  background: var(--bg-elevated);
+  background: #0065d1;
   transform: scale(0.95) translateY(0);
 }
 .scroll-to-top-btn svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 /* ══════════════════════════════════════════════════════════════ */

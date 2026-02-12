@@ -814,6 +814,8 @@ function showDayActionSheet(dateStr, date) {
       `}
 
       ${pickerHtml}
+
+      <button class="day-action-cancel" data-action="cancel">Cancel</button>
     </div>
   `;
 
@@ -840,7 +842,9 @@ function showDayActionSheet(dateStr, date) {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
 
-      if (action === 'plan-simple') {
+      if (action === 'cancel') {
+        close();
+      } else if (action === 'plan-simple') {
         setScheduleDay(dateStr, true);
         rerenderWeekStrip();
         // Re-open sheet to show management options (recurring, assign workout, etc.)
@@ -992,7 +996,7 @@ function bindWeekStripEvents() {
       if (isCompleted) {
         const workouts = Store.getWorkouts();
         const match = workouts.find((w) => toDateStr(w.finishedAt) === dateStr);
-        if (match) Router.go('/history/workout', { workoutId: match.id });
+        if (match) Router.go('/history/workout', { workoutId: match.id, from: 'home' });
       } else {
         // Open action sheet for planning options
         const date = new Date(dateStr + 'T12:00:00');
@@ -1436,10 +1440,10 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       }
     </header>
     <main class="content" id="routineEditorMain">
+      <input type="text" id="routineName" class="routine-name-input" placeholder="Workout name" value="${esc(
+        routineName,
+      )}" autocomplete="off" />
       <div class="routine-editor-top">
-        <input type="text" id="routineName" class="routine-name-input" placeholder="Workout name" value="${esc(
-          routineName,
-        )}" autocomplete="off" />
         <div class="selected-chips" id="selectedChips">
           ${renderSelectedChips(selected)}
         </div>
@@ -1455,39 +1459,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
         </ul>
       </section>
 
-      <section class="routine-section routine-selected-section" id="selectedSection">
-        <h2 class="section-title selected-section-title">
-          <span>Selected</span>
-          <span class="badge" id="selectedBadge">${selected.length}</span>
-          <button class="btn-toggle-selected" id="toggleSelectedBtn" aria-label="Toggle selected">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </h2>
-        <ul class="exercise-list selected-list" id="selectedList">
-          ${
-            selected.length === 0
-              ? '<li class="empty-row">No exercises added yet</li>'
-              : selected
-                  .map(
-                    (ex, i) => `
-              <li class="exercise-item selected-item" draggable="true" data-index="${i}">
-                <span class="drag-handle">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
-                </span>
-                <div class="ex-info">
-                  <span class="ex-name">${esc(ex.name)}</span>
-                  <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
-                </div>
-                <button class="btn-remove" data-remove="${i}" aria-label="Remove">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </li>
-            `,
-                  )
-                  .join('')
-          }
-        </ul>
-      </section>
 
     </main>
     <div class="sticky-save-bar">
@@ -1509,29 +1480,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       bindChipRemoveButtons();
     }
 
-    // Update selected list
-    const selectedList = document.getElementById('selectedList');
-    selectedList.innerHTML = selected.length === 0
-      ? '<li class="empty-row">No exercises added yet</li>'
-      : selected.map((ex, i) => `
-          <li class="exercise-item selected-item" draggable="true" data-index="${i}">
-            <span class="drag-handle">
-              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
-            </span>
-            <div class="ex-info">
-              <span class="ex-name">${esc(ex.name)}</span>
-              <span class="ex-meta">${esc(ex.muscle)} · ${esc(ex.equipment)}</span>
-            </div>
-            <button class="btn-remove" data-remove="${i}" aria-label="Remove">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </li>
-        `).join('');
-
-    // Update badge count
-    const badge = document.getElementById('selectedBadge');
-    if (badge) badge.textContent = selected.length;
-
     // Update available list (apply current search filter)
     let filtered = allExercises;
     if (q)
@@ -1545,7 +1493,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
 
     // Re-bind item buttons (not drag — container listeners persist)
     bindAddButtons();
-    bindRemoveButtons();
   }
 
   // ── Bind chip remove buttons ─────────────────────────────────
@@ -1574,94 +1521,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     });
   }
 
-  // ── Bind remove-exercise buttons ───────────────────────────
-  function bindRemoveButtons() {
-    document.querySelectorAll('.btn-remove').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        selected.splice(parseInt(btn.dataset.remove), 1);
-        updateLists();
-      });
-    });
-  }
-
-  // ── Bind drag-and-drop reorder ─────────────────────────────
-  function bindDragReorder() {
-    let dragIdx = null;
-    const selList = document.getElementById('selectedList');
-
-    selList.addEventListener('dragstart', (e) => {
-      const item = e.target.closest('.selected-item');
-      if (!item) return;
-      dragIdx = parseInt(item.dataset.index);
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    selList.addEventListener('dragend', (e) => {
-      const item = e.target.closest('.selected-item');
-      if (item) item.classList.remove('dragging');
-    });
-    selList.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    });
-    selList.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const item = e.target.closest('.selected-item');
-      if (!item) return;
-      const dropIdx = parseInt(item.dataset.index);
-      if (dragIdx != null && dragIdx !== dropIdx) {
-        const [moved] = selected.splice(dragIdx, 1);
-        selected.splice(dropIdx, 0, moved);
-        updateLists();
-      }
-    });
-
-    // ── Touch-based reorder for mobile ───────────────────────
-    let touchStartY = 0;
-    let touchItem = null;
-    let touchIdx = null;
-
-    selList.addEventListener(
-      'touchstart',
-      (e) => {
-        const handle = e.target.closest('.drag-handle');
-        if (!handle) return;
-        touchItem = handle.closest('.selected-item');
-        touchIdx = parseInt(touchItem.dataset.index);
-        touchStartY = e.touches[0].clientY;
-        touchItem.classList.add('dragging');
-      },
-      { passive: true },
-    );
-
-    selList.addEventListener(
-      'touchmove',
-      (e) => {
-        if (!touchItem) return;
-      },
-      { passive: true },
-    );
-
-    selList.addEventListener('touchend', (e) => {
-      if (!touchItem) return;
-      const endY = e.changedTouches[0].clientY;
-      const diff = endY - touchStartY;
-      const threshold = 50;
-      if (Math.abs(diff) > threshold && touchIdx != null) {
-        const direction = diff > 0 ? 1 : -1;
-        const newIdx = Math.max(0, Math.min(selected.length - 1, touchIdx + direction));
-        if (newIdx !== touchIdx) {
-          const [moved] = selected.splice(touchIdx, 1);
-          selected.splice(newIdx, 0, moved);
-          updateLists();
-          return;
-        }
-      }
-      touchItem.classList.remove('dragging');
-      touchItem = null;
-      touchIdx = null;
-    });
-  }
 
   // ── Save routine ───────────────────────────────────────────
   document.getElementById('saveRoutineBtn').addEventListener('click', () => {
@@ -1669,7 +1528,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
     if (!name) {
       const nameInput = document.getElementById('routineName');
       shakeElement(nameInput);
-      showFormError(nameInput.closest('label'), 'Please enter a workout name');
+      showFormError(nameInput, 'Please enter a workout name');
       nameInput.addEventListener('input', () => {
         const err = document.querySelector('.form-error');
         if (err) err.remove();
@@ -1677,9 +1536,9 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       return;
     }
     if (selected.length === 0) {
-      const list = document.getElementById('selectedList');
-      shakeElement(list);
-      showFormError(list, 'Add at least one exercise');
+      const chipsEl = document.getElementById('selectedChips');
+      shakeElement(chipsEl);
+      showFormError(chipsEl, 'Add at least one exercise');
       return;
     }
 
@@ -1717,9 +1576,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
 
   // ── Initial button bindings ────────────────────────────────
   bindAddButtons();
-  bindRemoveButtons();
   bindChipRemoveButtons();
-  bindDragReorder();
 
   // ── Search ─────────────────────────────────────────────────
   const routineSearchInput = document.getElementById('routineSearch');
@@ -1746,13 +1603,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       e.preventDefault();
       routineSearchInput.blur();
     }
-  });
-
-  // ── Toggle selected section collapse ──────────────────────
-  const toggleBtn = document.getElementById('toggleSelectedBtn');
-  const selectedSection = document.getElementById('selectedSection');
-  toggleBtn.addEventListener('click', () => {
-    selectedSection.classList.toggle('collapsed');
   });
 }
 
@@ -3140,9 +2990,9 @@ function showSaveAsRoutinePrompt(completedWorkout) {
       <div class="confirm-modal-icon save">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       </div>
-      <h3 class="confirm-modal-title">Save as Routine?</h3>
-      <p class="confirm-modal-message">Would you like to save this workout as a reusable routine?</p>
-      <input type="text" id="saveRoutineNameInput" class="save-routine-input" placeholder="Routine name" value="${esc(completedWorkout.routineName === 'Quick Workout' ? '' : completedWorkout.routineName)}" autocomplete="off" />
+      <h3 class="confirm-modal-title">Save as Workout?</h3>
+      <p class="confirm-modal-message">Would you like to save this as a reusable workout template?</p>
+      <input type="text" id="saveRoutineNameInput" class="save-routine-input" placeholder="Workout name" value="${esc(completedWorkout.routineName === 'Quick Workout' ? '' : completedWorkout.routineName)}" autocomplete="off" />
       <div class="confirm-modal-actions">
         <button class="confirm-modal-btn cancel">Skip</button>
         <button class="confirm-modal-btn confirm" id="btnSaveAsRoutine">Save</button>
@@ -3154,10 +3004,35 @@ function showSaveAsRoutinePrompt(completedWorkout) {
   requestAnimationFrame(() => overlay.classList.add('visible'));
 
   const nameInput = overlay.querySelector('#saveRoutineNameInput');
-  nameInput.focus();
-  nameInput.select();
+  const modal = overlay.querySelector('.save-routine-modal');
+
+  // Fix keyboard overlap on iOS: shift modal up when keyboard appears
+  const adjustForKeyboard = () => {
+    if (window.visualViewport) {
+      const vvH = window.visualViewport.height;
+      const offsetTop = window.visualViewport.offsetTop;
+      overlay.style.height = vvH + 'px';
+      overlay.style.top = offsetTop + 'px';
+    }
+  };
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjustForKeyboard);
+    window.visualViewport.addEventListener('scroll', adjustForKeyboard);
+  }
+
+  // Delay focus slightly so the modal animates in before keyboard pushes it
+  setTimeout(() => {
+    nameInput.focus();
+    nameInput.select();
+  }, 300);
 
   const close = () => {
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', adjustForKeyboard);
+      window.visualViewport.removeEventListener('scroll', adjustForKeyboard);
+    }
+    overlay.style.height = '';
+    overlay.style.top = '';
     overlay.classList.remove('visible');
     setTimeout(() => overlay.remove(), 200);
   };
@@ -3597,6 +3472,7 @@ function viewWorkoutDetail(params) {
     return;
   }
 
+  const backPath = params.from === 'home' ? '/' : '/history';
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
   const totalVolume = workout.exercises.reduce(
     (sum, ex) => sum + ex.sets.reduce((s, set) => s + set.weight * set.reps, 0),
@@ -3606,7 +3482,7 @@ function viewWorkoutDetail(params) {
 
   render(`
     <header class="header">
-      <button class="btn-back" onclick="Router.go('/history')">
+      <button class="btn-back" id="workoutDetailBack">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h1>Workout Detail</h1>
@@ -3702,6 +3578,11 @@ function viewWorkoutDetail(params) {
       </div>
     </main>
   `);
+
+  // Back button — go to home if opened from week strip, otherwise history
+  document.getElementById('workoutDetailBack').addEventListener('click', () => {
+    Router.go(backPath);
+  });
 
   // Delete workout
   document.getElementById('deleteWorkoutBtn').addEventListener('click', () => {
