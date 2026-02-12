@@ -1440,7 +1440,7 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
       }
     </header>
     <main class="content" id="routineEditorMain">
-      <div class="routine-editor-top">
+      <div class="routine-editor-top" id="routineEditorTop">
         <input type="text" id="routineName" class="routine-name-input" placeholder="Workout name" value="${esc(
           routineName,
         )}" autocomplete="off" />
@@ -1452,14 +1452,13 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
           <input type="text" id="routineSearch" placeholder="Search exercises to add…" autocomplete="off" enterkeyhint="search" />
         </div>
       </div>
+      <div id="routineEditorSpacer"></div>
 
       <section class="routine-section routine-available-section">
         <ul class="exercise-list" id="availableList">
           ${renderAvailableExercises(allExercises, selected)}
         </ul>
       </section>
-
-
     </main>
     <div class="sticky-save-bar">
       <button class="btn-primary btn-full" id="saveRoutineBtn">${
@@ -1577,6 +1576,25 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   // ── Initial button bindings ────────────────────────────────
   bindAddButtons();
   bindChipRemoveButtons();
+
+  // ── Pin the top area (name + chips + search) to screen ─────
+  const editorTop = document.getElementById('routineEditorTop');
+  const editorSpacer = document.getElementById('routineEditorSpacer');
+  const headerEl = document.querySelector('.header');
+
+  function pinEditorTop() {
+    const headerH = headerEl ? headerEl.offsetHeight : 0;
+    editorTop.style.position = 'fixed';
+    editorTop.style.top = headerH + 'px';
+    editorTop.style.left = '0';
+    editorTop.style.right = '0';
+    editorTop.style.zIndex = '20';
+    // Spacer pushes the exercise list below the fixed area
+    // Subtract content's own top padding (16px) since spacer sits inside .content
+    const spacerH = Math.max(0, editorTop.offsetHeight - 16);
+    editorSpacer.style.height = spacerH + 'px';
+  }
+  pinEditorTop();
 
   // ── Search ─────────────────────────────────────────────────
   const routineSearchInput = document.getElementById('routineSearch');

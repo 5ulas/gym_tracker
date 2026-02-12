@@ -573,14 +573,9 @@ select.form-input {
   padding-bottom: calc(var(--safe-bottom) + 80px);
 }
 
-/* ── Routine Editor Top Area (name + search) ───────────────── */
+/* ── Routine Editor Top Area (fixed by JS) ───────────────── */
 .routine-editor-top {
-  position: sticky;
-  top: 0;
-  z-index: 20;
   background: var(--bg);
-  padding-bottom: 8px;
-  margin: 0 -16px;
   padding: 8px 16px 8px;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
