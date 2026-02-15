@@ -23,9 +23,11 @@
   --text: #f0f0f0;
   --text-muted: #8e8e93;
   --text-dim: #636366;
+  --text-secondary: #9a9a9e;
   --danger: #ff453a;
   --success: #30d158;
   --warning: #ffd60a;
+  --missed: #ff9f0a;
   --border: #333;
   --radius: 14px;
   --radius-sm: 10px;
@@ -56,6 +58,12 @@ body {
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
+}
+#app.app-fixed-height {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Header ───────────────────────────────────────────────── */
@@ -573,12 +581,16 @@ select.form-input {
   padding-bottom: calc(var(--safe-bottom) + 80px);
 }
 
-/* ── Routine Editor Top Area (fixed by JS) ───────────────── */
+/* ── Routine Editor Top Area (sticky within scroll container) ─ */
 .routine-editor-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   background: var(--bg);
-  padding: 8px 16px 8px;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin: -16px -16px 0;
+  padding: 16px 16px 8px;
 }
 .routine-name-input {
   width: 100%;
@@ -3188,11 +3200,11 @@ select.form-input {
 
 /* Missed day */
 .week-day.missed .week-day-ring {
-  border-color: var(--danger);
-  background: rgba(255, 69, 58, 0.08);
+  border-color: var(--missed);
+  background: rgba(255, 159, 10, 0.08);
 }
 .week-day.missed .week-day-label {
-  color: var(--danger);
+  color: var(--missed);
 }
 
 /* Today highlight */
@@ -3237,7 +3249,7 @@ select.form-input {
   stroke: var(--text-muted);
 }
 .week-day.missed .week-icon-scheduled svg {
-  stroke: var(--danger);
+  stroke: var(--missed);
   opacity: 0.7;
 }
 
@@ -3314,7 +3326,7 @@ select.form-input {
   margin-top: -2px;
 }
 .week-day.missed .week-day-routine {
-  color: var(--danger);
+  color: var(--missed);
   opacity: 0.7;
 }
 
@@ -3838,4 +3850,135 @@ select.form-input {
 .btn-undo:active {
   background: #0065d1;
   transform: scale(0.95);
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Help Button                                                     */
+/* ══════════════════════════════════════════════════════════════ */
+.btn-help {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.15s, transform 0.15s;
+}
+.btn-help:active {
+  transform: scale(0.9);
+}
+.btn-help svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Help Modal                                                      */
+/* ══════════════════════════════════════════════════════════════ */
+.help-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.help-modal-overlay.visible {
+  opacity: 1;
+}
+.help-modal {
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.help-modal-overlay.visible .help-modal {
+  transform: translateY(0);
+}
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.help-modal-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.btn-close-help {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--bg-elevated);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.btn-close-help:active {
+  transform: scale(0.9);
+  background: var(--bg-input);
+}
+.btn-close-help svg {
+  width: 18px;
+  height: 18px;
+}
+.help-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px;
+}
+.help-section {
+  margin-bottom: 24px;
+}
+.help-section:last-child {
+  margin-bottom: 0;
+}
+.help-section h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 8px;
+}
+.help-section p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+.help-section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.help-section li {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+.help-section li strong {
+  color: var(--text);
 }

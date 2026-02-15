@@ -238,6 +238,7 @@ const $app = () => document.getElementById('app');
 
 function render(html) {
   hideScrollToTop(); // Cleanup scroll listener when changing views
+  $app().classList.remove('app-fixed-height');
   $app().innerHTML = html;
 }
 
@@ -584,7 +585,10 @@ function resolveScheduleEntry(dateStr, date, schedule) {
     return val;
   }
 
-  // Check recurring rules
+  // Check recurring rules (only for today and future)
+  const today = toDateStr(new Date());
+  if (dateStr < today) return null; // Don't apply recurring to past dates
+
   const dow = isoDayOfWeek(date);
   const rule = recurring.find((r) => r.dayOfWeek === dow);
   if (rule) {
@@ -777,6 +781,10 @@ function showDayActionSheet(dateStr, date) {
               ${chevronIcon}
             </button>
           ` : ''}
+          <button class="day-action-btn" data-action="quick-workout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Quick Workout</span>
+          </button>
         </div>
       ` : `
         <div class="day-action-section" id="dayActionMain">
@@ -860,6 +868,9 @@ function showDayActionSheet(dateStr, date) {
         const routineId = btn.dataset.routineId;
         close();
         startWorkout(routineId);
+      } else if (action === 'quick-workout') {
+        close();
+        startQuickWorkout();
       } else if (action === 'toggle-recurring') {
         if (recurringRule) {
           removeRecurringRule(dow);
@@ -871,10 +882,17 @@ function showDayActionSheet(dateStr, date) {
         rerenderWeekStrip();
       } else if (action === 'remove') {
         if (isFromRecurring) {
-          // Override recurring for this specific date: set to explicitly empty
+          // Override recurring for this specific date: set to explicitly cancelled
           setScheduleDay(dateStr, false);
         } else {
-          setScheduleDay(dateStr, null);
+          // Check if a recurring rule exists for this day of week
+          // If so, we need to cancel this specific day, not just delete the explicit entry
+          const ruleExists = getRecurringRule(dow);
+          if (ruleExists) {
+            setScheduleDay(dateStr, false); // Cancel this day to prevent recurring from applying
+          } else {
+            setScheduleDay(dateStr, null); // Just delete the explicit entry
+          }
         }
         close();
         rerenderWeekStrip();
@@ -1157,7 +1175,9 @@ function viewRoutines() {
 
   render(`
     <header class="header">
-      <div class="header-spacer"></div>
+      <button class="btn-help" id="btnHelp" aria-label="How it works">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
       <h1>Workouts</h1>
       <div class="header-spacer"></div>
     </header>
@@ -1237,6 +1257,9 @@ function viewRoutines() {
     ${tabBar('/')}
   `);
   bindWeekStripEvents();
+
+  // Help button
+  document.getElementById('btnHelp')?.addEventListener('click', showHelpModal);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1452,7 +1475,6 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
           <input type="text" id="routineSearch" placeholder="Search exercises to add…" autocomplete="off" enterkeyhint="search" />
         </div>
       </div>
-      <div id="routineEditorSpacer"></div>
 
       <section class="routine-section routine-available-section">
         <ul class="exercise-list" id="availableList">
@@ -1577,24 +1599,9 @@ function renderRoutineEditor(routineName, selected, isEdit, routineId) {
   bindAddButtons();
   bindChipRemoveButtons();
 
-  // ── Pin the top area (name + chips + search) to screen ─────
-  const editorTop = document.getElementById('routineEditorTop');
-  const editorSpacer = document.getElementById('routineEditorSpacer');
-  const headerEl = document.querySelector('.header');
-
-  function pinEditorTop() {
-    const headerH = headerEl ? headerEl.offsetHeight : 0;
-    editorTop.style.position = 'fixed';
-    editorTop.style.top = headerH + 'px';
-    editorTop.style.left = '0';
-    editorTop.style.right = '0';
-    editorTop.style.zIndex = '20';
-    // Spacer pushes the exercise list below the fixed area
-    // Subtract content's own top padding (16px) since spacer sits inside .content
-    const spacerH = Math.max(0, editorTop.offsetHeight - 16);
-    editorSpacer.style.height = spacerH + 'px';
-  }
-  pinEditorTop();
+  // ── Make #app fixed-height so .content becomes the scroll container ─
+  // This allows position:sticky to work on .routine-editor-top
+  document.getElementById('app').classList.add('app-fixed-height');
 
   // ── Search ─────────────────────────────────────────────────
   const routineSearchInput = document.getElementById('routineSearch');
@@ -1669,6 +1676,9 @@ function showFormError(anchorEl, message) {
 function startWorkout(routineId) {
   const existing = Store.getActiveWorkout();
 
+  // Request notification permission when starting a workout
+  requestNotificationPermission();
+
   const doStart = () => {
     const routine = Store.getRoutines().find((r) => r.id === routineId);
     if (!routine) return;
@@ -1706,6 +1716,9 @@ function startWorkout(routineId) {
 // ── Start a Quick Workout (empty, add exercises on the fly) ───
 function startQuickWorkout() {
   const existing = Store.getActiveWorkout();
+
+  // Request notification permission when starting a workout
+  requestNotificationPermission();
 
   const doStart = () => {
     const workout = {
@@ -1791,12 +1804,27 @@ let _restRemaining = 0;
 let _restTotal = 0;
 let _restCallback = null;
 let _restExerciseId = null; // Track which exercise this rest is for
+let _restEndTime = null; // Timestamp when timer should end (for background support)
+let _restOnTick = null; // Store tick callback for resuming
+
+// Request notification permission on first workout
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
 
 function startRestTimer(seconds, onTick, onDone) {
   clearRestTimer();
   _restTotal = seconds;
   _restRemaining = seconds;
   _restCallback = onDone;
+  _restOnTick = onTick;
+  _restEndTime = Date.now() + seconds * 1000;
+
+  // Store end time in localStorage for background recovery
+  localStorage.setItem('il_rest_end_time', _restEndTime.toString());
+  localStorage.setItem('il_rest_total', _restTotal.toString());
 
   onTick(_restRemaining, _restTotal);
 
@@ -1805,6 +1833,7 @@ function startRestTimer(seconds, onTick, onDone) {
     onTick(_restRemaining, _restTotal);
     if (_restRemaining <= 0) {
       clearRestTimer();
+      showTimerNotification();
       if (onDone) onDone();
     }
   }, 1000);
@@ -1818,11 +1847,85 @@ function clearRestTimer() {
   _restRemaining = 0;
   _restTotal = 0;
   _restExerciseId = null;
+  _restEndTime = null;
+  _restOnTick = null;
+  localStorage.removeItem('il_rest_end_time');
+  localStorage.removeItem('il_rest_total');
 }
 
 function isRestTimerRunning() {
   return _restTimer !== null;
 }
+
+// Show notification when timer ends
+function showTimerNotification() {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    // Check if app is in background
+    if (document.visibilityState === 'hidden') {
+      new Notification('Rest Complete', {
+        body: 'Time for your next set!',
+        icon: '/icons/icon-192.png',
+        tag: 'rest-timer',
+        requireInteraction: false
+      });
+    }
+  }
+}
+
+// Handle visibility change — recalculate timer when app resumes
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    // App came back to foreground — check if timer was running
+    const storedEndTime = localStorage.getItem('il_rest_end_time');
+    const storedTotal = localStorage.getItem('il_rest_total');
+    
+    if (storedEndTime && storedTotal) {
+      const endTime = parseInt(storedEndTime);
+      const total = parseInt(storedTotal);
+      const now = Date.now();
+      const remainingMs = endTime - now;
+      
+      if (remainingMs > 0) {
+        // Timer still has time left — resume it
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        
+        // If we have an active timer running, just update remaining
+        if (_restTimer && _restOnTick) {
+          _restRemaining = remainingSec;
+          _restEndTime = endTime;
+          _restOnTick(_restRemaining, total);
+        }
+      } else if (remainingMs <= 0 && remainingMs > -5000) {
+        // Timer ended while in background (within last 5 seconds)
+        // Clear stored values and trigger completion
+        localStorage.removeItem('il_rest_end_time');
+        localStorage.removeItem('il_rest_total');
+        
+        if (_restTimer) {
+          clearRestTimer();
+          showTimerNotification();
+          // Vibrate to alert user
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          // Re-render
+          const w = Store.getActiveWorkout();
+          if (w) renderActiveWorkout(w);
+        }
+      } else {
+        // Timer ended long ago — just clean up
+        localStorage.removeItem('il_rest_end_time');
+        localStorage.removeItem('il_rest_total');
+        if (_restTimer) {
+          clearRestTimer();
+          const w = Store.getActiveWorkout();
+          if (w) renderActiveWorkout(w);
+        }
+      }
+    }
+  }
+}
+
+// Register visibility change listener
+document.addEventListener('visibilitychange', handleVisibilityChange);
 
 // ── Format helpers ───────────────────────────────────────────
 function formatDuration(ms) {
@@ -2199,7 +2302,9 @@ function renderActiveWorkout(workout) {
     btnLogSet.addEventListener('click', () => {
       if (btnLogSet.disabled) return;
 
-      const weight = parseFloat(document.getElementById('inputWeight').value) || 0;
+      // Normalize comma to period for European locales
+      const weightInput = document.getElementById('inputWeight').value.replace(',', '.');
+      const weight = parseFloat(weightInput) || 0;
       const reps = parseInt(document.getElementById('inputReps').value) || 0;
 
       if (reps === 0) {
@@ -2304,7 +2409,9 @@ function renderActiveWorkout(workout) {
       if (saveBtn) {
         saveBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const newWeight = parseFloat(editRow.querySelector('.edit-set-weight').value) || 0;
+          // Normalize comma to period for European locales
+          const weightInput = editRow.querySelector('.edit-set-weight').value.replace(',', '.');
+          const newWeight = parseFloat(weightInput) || 0;
           const newReps = parseInt(editRow.querySelector('.edit-set-reps').value) || 0;
           const activeDiffBtn = editRow.querySelector('.edit-diff-selector .diff-btn.active');
           const newDiff = activeDiffBtn ? activeDiffBtn.dataset.diff : 'medium';
@@ -2650,6 +2757,11 @@ function adjustRestTimer(delta) {
   if (!isRestTimerRunning()) return;
   _restRemaining = Math.max(0, _restRemaining + delta);
   _restTotal = Math.max(_restTotal, _restRemaining);
+
+  // Update end time in localStorage for background support
+  _restEndTime = Date.now() + _restRemaining * 1000;
+  localStorage.setItem('il_rest_end_time', _restEndTime.toString());
+  localStorage.setItem('il_rest_total', _restTotal.toString());
 
   // Save this preference for the exercise
   if (_restExerciseId && _restTotal > 0) {
@@ -3090,6 +3202,92 @@ function showSaveAsRoutinePrompt(completedWorkout) {
     if (e.key === 'Enter') {
       overlay.querySelector('#btnSaveAsRoutine').click();
     }
+  });
+}
+
+// ── Help/Tutorial Modal ───────────────────────────────────────
+function showHelpModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'help-modal-overlay';
+  overlay.innerHTML = `
+    <div class="help-modal">
+      <div class="help-modal-header">
+        <h2>How ArkLog Works</h2>
+        <button class="btn-close-help" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="help-modal-content">
+        <div class="help-section">
+          <h3>Getting Started</h3>
+          <p>Create workouts with your favorite exercises, then start tracking your progress. The app remembers your performance and helps you improve over time.</p>
+        </div>
+
+        <div class="help-section">
+          <h3>Week View</h3>
+          <p>The week strip shows your training schedule. Tap any day to:</p>
+          <ul>
+            <li>Mark it as a planned gym day</li>
+            <li>Assign a specific workout</li>
+            <li>Make workouts recurring (e.g., every Monday)</li>
+            <li>View completed workout details</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>Smart Suggestions</h3>
+          <p>When you perform the same workout again, ArkLog pre-fills weights and reps based on your last session, with smart progression:</p>
+          <ul>
+            <li><strong>Easy + top of rep range:</strong> Suggests weight increase</li>
+            <li><strong>Hard:</strong> Maintains current weight</li>
+            <li><strong>Medium:</strong> Suggests +1 rep toward your goal</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>During Workouts</h3>
+          <ul>
+            <li><strong>Log sets:</strong> Enter weight, reps, and difficulty (easy/medium/hard)</li>
+            <li><strong>Rest timer:</strong> Automatically starts after each set, adjustable with +/- buttons</li>
+            <li><strong>Swap exercise:</strong> Tap the swap icon to replace an exercise with a similar alternative</li>
+            <li><strong>Edit sets:</strong> Tap any logged set to modify it</li>
+            <li><strong>Notes:</strong> Add notes to any exercise</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>Tracking Progress</h3>
+          <ul>
+            <li><strong>Personal bests:</strong> Shown above each exercise input</li>
+            <li><strong>History:</strong> View all past workouts in the History tab</li>
+            <li><strong>Progress charts:</strong> Tap any exercise in History to see trends over time</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>Tips</h3>
+          <ul>
+            <li>Use <strong>Quick Workout</strong> for unplanned sessions</li>
+            <li>Difficulty affects rest time: Easy=60s, Medium=90s, Hard=120s</li>
+            <li>The rest timer remembers your preferred duration per exercise</li>
+            <li>Export your data regularly from Settings for backup</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+
+  const close = () => {
+    overlay.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 200);
+  };
+
+  overlay.querySelector('.btn-close-help').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
   });
 }
 

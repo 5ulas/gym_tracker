@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arklog-v2';
+const CACHE_NAME = 'arklog-v3';
 const ASSETS = [
   '/',
   '/index.html',
