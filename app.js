@@ -1857,8 +1857,38 @@ function isRestTimerRunning() {
   return _restTimer !== null;
 }
 
+// Play a beep sound using Web Audio API
+function playTimerBeep() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Play 3 short beeps
+    [0, 0.2, 0.4].forEach((delay) => {
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.frequency.value = 880; // A5 note
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime + delay);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + delay + 0.15);
+      
+      oscillator.start(audioCtx.currentTime + delay);
+      oscillator.stop(audioCtx.currentTime + delay + 0.15);
+    });
+  } catch (e) {
+    // Audio not supported, ignore
+  }
+}
+
 // Show notification when timer ends
 function showTimerNotification() {
+  // Play audio beep (works even when app is in foreground)
+  playTimerBeep();
+  
   if ('Notification' in window && Notification.permission === 'granted') {
     // Check if app is in background
     if (document.visibilityState === 'hidden') {
@@ -2109,13 +2139,13 @@ function renderActiveWorkout(workout) {
             <div class="set-input-row set-next-up" id="setInputRow">
               <span class="set-col-num set-number set-number-next">${exercise.sets.length + 1}</span>
               <div class="set-col-weight">
-                <input type="number" id="inputWeight" class="set-input" placeholder="0"
-                       inputmode="decimal" step="0.5" min="0"
+                <input type="text" id="inputWeight" class="set-input" placeholder="0"
+                       inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*"
                        value="${getDefaultWeight(exercise, lastPerf)}" />
               </div>
               <div class="set-col-reps">
-                <input type="number" id="inputReps" class="set-input" placeholder="0"
-                       inputmode="numeric" step="1" min="0"
+                <input type="text" id="inputReps" class="set-input" placeholder="0"
+                       inputmode="numeric" pattern="[0-9]*"
                        value="${getDefaultReps(exercise, lastPerf)}" />
               </div>
               <div class="set-col-diff">
@@ -2530,10 +2560,10 @@ function renderEditSetRow(set, index) {
     <div class="set-row editing" data-setidx="${index}">
       <span class="set-col-num set-number">${index + 1}</span>
       <div class="set-col-weight">
-        <input type="number" class="set-input edit-set-weight" value="${set.weight}" inputmode="decimal" step="0.5" min="0" />
+        <input type="text" class="set-input edit-set-weight" value="${set.weight}" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" />
       </div>
       <div class="set-col-reps">
-        <input type="number" class="set-input edit-set-reps" value="${set.reps}" inputmode="numeric" step="1" min="0" />
+        <input type="text" class="set-input edit-set-reps" value="${set.reps}" inputmode="numeric" pattern="[0-9]*" />
       </div>
       <div class="set-col-diff">
         <div class="difficulty-selector edit-diff-selector">
